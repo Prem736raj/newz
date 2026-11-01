@@ -19,10 +19,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Use the Android SDK preinstalled on Ubuntu runner
+      - name: Locate Android SDK tools on the Ubuntu runner
+        shell: bash
         run: |
-          sdkmanager --version
-          yes | sdkmanager --licenses > /dev/null || true
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDK_MANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit)"
+          test -n "$SDK_MANAGER"
+          echo "$(dirname "$SDK_MANAGER")" >> "$GITHUB_PATH"
+          "$SDK_MANAGER" --version
+          yes | "$SDK_MANAGER" --licenses > /dev/null || true
       - name: Install SDK packages used by current AGP configuration
         run: |
           sdkmanager --install 'platforms;android-36' 'platforms;android-36.1' 'build-tools;36.0.0'
