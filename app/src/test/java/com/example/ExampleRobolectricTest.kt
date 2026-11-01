@@ -58,7 +58,7 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `verify seed catalog and representative data integrity`() {
+    fun `inspect example seed structure without claiming independent verification`() {
         val states = SurakshaArchiveSeedData.stateJurisdictions
         assertTrue("Catalog should include Andhra Pradesh", states.any { it.stateName == "Andhra Pradesh" })
         val dossiers = SurakshaArchiveSeedData.buildInitialCaseDossiers()
@@ -67,15 +67,15 @@ class ExampleRobolectricTest {
         val apDossier = dossiers.first { it.id == "case_ap_school_chainsaw_01" }
         assertEquals("Andhra Pradesh", apDossier.stateName)
         assertTrue(apDossier.timelineUpdates.size >= 3)
-        assertEquals(VerificationStatus.CONFIRMED, apDossier.verificationStatus)
+        assertEquals(VerificationStatus.AWAITING_VERIFICATION, apDossier.verificationStatus)
 
         val apState = states.first { it.stateName == "Andhra Pradesh" }
         val anakapalli = apState.districts.first { it.districtName == "Anakapalli" }
         val elamanchili = anakapalli.cities.first { it.cityName == "Elamanchili" }
         assertNotNull(elamanchili)
-        assertTrue(elamanchili.mlaName.contains("Sundarapu Vijay Kumar"))
-        assertTrue(elamanchili.mpName.contains("C. M. Ramesh"))
-        assertTrue(apDossier.representativeDataSource.contains("Election Commission"))
+        assertTrue(elamanchili.mlaName.isNotBlank())
+        assertTrue(elamanchili.mpName.isNotBlank())
+        assertTrue(apDossier.representativeDataSource.contains("not independently verified"))
     }
 
     @Test

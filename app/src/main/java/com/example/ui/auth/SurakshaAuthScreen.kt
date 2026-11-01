@@ -73,6 +73,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Google Services supplies this resource only after a real Firebase app is configured.
+ * Resolve dynamically so clean CI builds compile without fabricated OAuth IDs.
+ * Sign-in remains unavailable until the app owner adds valid Firebase configuration.
+ */
+internal fun resolveGoogleWebClientId(context: Context): String? {
+    val resourceId = context.resources.getIdentifier(
+        "default_web_client_id", "string", context.packageName
+    )
+    if (resourceId == 0) return null
+    return runCatching { context.getString(resourceId).trim() }
+        .getOrNull()
+        ?.takeIf { it.isNotBlank() }
+}
+
 fun attemptAutoSignIn(
     context: Context,
     credentialManager: CredentialManager,
@@ -84,9 +99,8 @@ fun attemptAutoSignIn(
         onAuthSuccess()
         return
     }
-    val clientId = try {
-        context.getString(R.string.default_web_client_id)
-    } catch (e: Exception) {
+    val clientId = resolveGoogleWebClientId(context)
+    if (clientId == null) {
         onUnauthenticated()
         return
     }
@@ -127,10 +141,9 @@ fun onGoogleSignInClicked(
     scope: CoroutineScope,
     onAuthCancelled: () -> Unit = {}
 ) {
-    val clientId = try {
-        context.getString(R.string.default_web_client_id)
-    } catch (e: Exception) {
-        onAuthError("Google Sign-In configuration missing: default_web_client_id not found")
+    val clientId = resolveGoogleWebClientId(context)
+    if (clientId == null) {
+        onAuthError("Google Sign-In is unavailable until Firebase OAuth is configured for this app.")
         return
     }
 
@@ -153,11 +166,11 @@ fun onGoogleSignInClicked(
                 onAuthError("Unexpected credential type returned.")
             }
         } catch (e: GetCredentialCancellationException) {
-            Log.w("Auth", "Google Sign-In cancelled or dismissed: ${e.message}", e)
+            Log.i("Auth", "Google Sign-In cancelled or dismissed")
             onAuthCancelled()
         } catch (e: Exception) {
-            Log.e("Auth", "Google Sign-In failed", e)
-            onAuthError(e.localizedMessage ?: "Sign in failed. Please try again.")
+            Log.e("Auth", "Google Sign-In failed: ${e.javaClass.simpleName}")
+            onAuthError("Sign in failed. Check your connection or contact support.")
         }
     }
 }

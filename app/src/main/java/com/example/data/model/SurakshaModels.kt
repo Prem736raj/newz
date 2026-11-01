@@ -19,11 +19,12 @@ enum class CaseStage(
     CHARGESHEET_FILED("CHARGESHEET_FILED", R.string.stage_chargesheet_filed, 3),
     TRIAL_ONGOING("TRIAL_ONGOING", R.string.stage_court_hearing, 4),
     VERDICT_DELIVERED("VERDICT_DELIVERED", R.string.stage_verdict, 5),
-    JUSTICE_PENDING("JUSTICE_PENDING", R.string.stage_under_investigation, 2);
+    JUSTICE_PENDING("JUSTICE_PENDING", R.string.stage_under_investigation, 2),
+    STATUS_UNVERIFIED("STATUS_UNVERIFIED", R.string.stage_status_unverified, 0);
 
     companion object {
         fun fromCode(code: String): CaseStage {
-            return entries.find { it.code.equals(code, ignoreCase = true) } ?: FIR_FILED
+            return entries.find { it.code.equals(code, ignoreCase = true) } ?: STATUS_UNVERIFIED
         }
     }
 }
@@ -227,7 +228,7 @@ data class SavedCase(
     val mpName: String = "",
     val victimCategory: String = "",
     val crimeCategory: String = "",
-    val caseStage: String = "FIR_FILED",
+    val caseStage: String = "STATUS_UNVERIFIED",
     val incidentDateLabel: String = "",
     val personalNotes: String? = null,
     @ServerTimestamp val createdAt: Timestamp? = null,
@@ -288,10 +289,10 @@ data class TimelineUpdateItem(
     val verificationStatus: VerificationStatus = if (isUserAdded) {
         VerificationStatus.AWAITING_VERIFICATION
     } else {
-        VerificationStatus.CONFIRMED
+        VerificationStatus.AWAITING_VERIFICATION
     },
-    val sourceReferenceUrl: String = "https://ecourts.gov.in/",
-    val lastCheckedDate: String = "Verified Oct 2026",
+    val sourceReferenceUrl: String = "",
+    val lastCheckedDate: String = "Not independently verified",
     val isMachineTranslated: Boolean = false,
     val originalHeadline: String = headline,
     val originalDetails: String = details
@@ -321,7 +322,7 @@ data class CaseDossier(
     val triggerWarning: String,
     val relevantLaws: List<String>,
     val sourceName: String,
-    val sourceUrl: String = "https://ncw.nic.in/",
+    val sourceUrl: String = "",
     val timelineUpdates: List<TimelineUpdateItem> = emptyList(),
     val isSavedForLife: Boolean = false,
     val isFollowed: Boolean = false,
@@ -330,19 +331,20 @@ data class CaseDossier(
     val verificationStatus: VerificationStatus = if (isLiveRss) {
         VerificationStatus.REPORTED_UNCONFIRMED
     } else {
-        VerificationStatus.CONFIRMED
+        VerificationStatus.AWAITING_VERIFICATION
     },
-    val lastVerifiedDate: String = "Oct 2026",
-    val representativeDataSource: String = "Election Commission of India (ECI) Official Affidavit & Secretariat Roll",
+    val lastVerifiedDate: String = "Not independently verified",
+    val representativeDataSource: String = "Representative data not independently verified",
     val isMachineTranslated: Boolean = false,
     val originalTitle: String = title,
     val originalSummary: String = summary,
-    val originalFullReport: String = fullReport
+    val originalFullReport: String = fullReport,
+    val publishedAtEpochMillis: Long? = null
 ) {
     val daysSinceIncident: Int
         get() {
             val now = System.currentTimeMillis()
-            val diff = (now - incidentEpochMillis).coerceAtLeast(86_400_000L)
+            val diff = if (incidentEpochMillis <= 0L || incidentEpochMillis > now) 0L else (now - incidentEpochMillis).coerceAtLeast(0L)
             return (diff / 86_400_000L).toInt()
         }
 }

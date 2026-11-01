@@ -422,7 +422,7 @@ fun SurakshaAuthenticatedShell(
                 }
                 val databaseId = app.getString(R.string.firestore_database_id)
                 val firestore = FirebaseFirestore.getInstance(databaseId)
-                val roomDb = SurakshaDatabase.getInstance(app)
+                val roomDb = SurakshaDatabase.getInstance(app, currentUserId)
                 val prefsRepo = UserPreferencesRepository(app)
                 val translationDao = roomDb.translationCacheDao()
                 SurakshaViewModel(
@@ -1009,7 +1009,8 @@ fun SurakshaAuthenticatedShell(
                             }
                             Switch(
                                 checked = notificationsEnabled,
-                                onCheckedChange = { viewModel.toggleNotificationsEnabled() },
+                                onCheckedChange = null,
+                                enabled = false,
                                 modifier = Modifier.testTag("toggle_notifications_switch")
                             )
                         }
