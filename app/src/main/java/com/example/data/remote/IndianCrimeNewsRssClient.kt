@@ -15,10 +15,16 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.xmlpull.v1.XmlPullParser
 import java.io.StringReader
+import java.io.ByteArrayOutputStream
+import java.net.URI
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 class IndianCrimeNewsRssClient {
+
+    private val maxRssBytes = 512 * 1024
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -76,7 +82,20 @@ class IndianCrimeNewsRssClient {
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return emptyList()
-                val xmlBody = response.body?.string() ?: return emptyList()
+                // Google RSS feeds are untrusted; enforce an input cap even without Content-Length.
+                val body = response.body ?: return emptyList()
+                if (body.contentLength() > maxRssBytes) return emptyList()
+                val xmlBody = body.byteStream().use { input ->
+                    val output = ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count == -1) break
+                        if (output.size() + count > maxRssBytes) return emptyList()
+                        output.write(buffer, 0, count)
+                    }
+                    output.toString(Charsets.UTF_8.name())
+                }
                 parseRssXml(xmlBody, stateQuery)
             }
         } catch (_: Exception) {
@@ -95,7 +114,7 @@ class IndianCrimeNewsRssClient {
         var title = ""
         var link = ""
         var pubDate = ""
-        var source = "Verified News Publisher"
+        var source = "Publisher not specified"
         var description = ""
 
         while (eventType != XmlPullParser.END_DOCUMENT && results.size < 12) {
@@ -107,13 +126,13 @@ class IndianCrimeNewsRssClient {
                             title = ""
                             link = ""
                             pubDate = ""
-                            source = "Verified News Publisher"
+                            source = "Publisher not specified"
                             description = ""
                         }
                         "title" -> if (insideItem) title = parser.nextText().trim()
                         "link" -> if (insideItem) link = parser.nextText().trim()
                         "pubdate" -> if (insideItem) pubDate = parser.nextText().trim()
-                        "source" -> if (insideItem) source = parser.nextText().trim()
+                        "source" -> if (insideItem) source = parser.nextText().trim().ifBlank { "Publisher not specified" }
                         "description" -> if (insideItem) description = parser.nextText().trim()
                     }
                 }
@@ -149,6 +168,11 @@ class IndianCrimeNewsRssClient {
                                     cleanTitle.contains("दुष्कर्म") ||
                                     cleanTitle.contains("हत्या")
 
+                                val publicationEpoch = parseRssPublicationMillis(pubDate)
+                                val safeSourceUrl = runCatching {
+                                    URI(link).takeIf { it.scheme.equals("https", ignoreCase = true) && !it.host.isNullOrBlank() }
+                                        ?.toString()
+                                }.getOrNull().orEmpty()
                                 val id = "live_rss_${titleStem.hashCode().toUInt()}"
                                 results.add(
                                     CaseDossier(
@@ -164,7 +188,7 @@ class IndianCrimeNewsRssClient {
                                             appendLine(cleanDesc)
                                             appendLine()
                                             appendLine("Editorial Attribution & Licensing Note:")
-                                            appendLine("This summary is attributed to $source. To respect publisher copyright and review full reporting, use the 'Open Original Source' button above.")
+                                            appendLine("This is an unverified syndicated excerpt, not an independently checked article or legal record. Read the linked original when available.")
                                         },
                                         stateName = matchedLocation.stateName,
                                         districtName = matchedLocation.districtName,
@@ -176,11 +200,7 @@ class IndianCrimeNewsRssClient {
                                         mpConstituency = matchedLocation.mpConstituency,
                                         mpParty = matchedLocation.mpParty,
                                         policeJurisdiction = matchedLocation.policeRange,
-                                        victimCategory = if (cleanTitle.contains("school", true) || cleanTitle.contains("minor", true) || cleanTitle.contains("class", true) || cleanTitle.contains("girl", true) || cleanTitle.contains("छात्रा") || cleanTitle.contains("नाबालिग")) {
-                                            "Teenage Student (13-19)"
-                                        } else {
-                                            "Woman"
-                                        },
+                                        victimCategory = "Affected group and age unverified",
                                         crimeCategory = when {
                                             cleanTitle.contains("school", true) || cleanTitle.contains("college", true) || cleanTitle.contains("स्कूल") || cleanTitle.contains("कॉलेज") -> "School/Campus Safety"
                                             cleanTitle.contains("pocso", true) || cleanTitle.contains("minor", true) || cleanTitle.contains("नाबालिग") -> "POCSO / Minor Protection"
@@ -188,34 +208,32 @@ class IndianCrimeNewsRssClient {
                                             cleanTitle.contains("court", true) || cleanTitle.contains("hc", true) || cleanTitle.contains("sc", true) || cleanTitle.contains("कोर्ट") -> "Legal Updates"
                                             else -> "Public Safety Report"
                                         },
-                                        caseStage = CaseStage.FIR_FILED,
-                                        incidentDateLabel = pubDate.take(16).ifBlank { "Recent Dispatch" },
-                                        incidentEpochMillis = System.currentTimeMillis() - 43_200_000L,
+                                        caseStage = CaseStage.STATUS_UNVERIFIED,
+                                        incidentDateLabel = "Incident date unverified",
+                                        incidentEpochMillis = 0L,
+                                        publishedAtEpochMillis = publicationEpoch,
                                         sensitivityLevel = if (isHighTrigger) SensitivityLevel.HIGH_DISTURBANCE else SensitivityLevel.SENSITIVE,
                                         triggerWarning = "Content Advisory: Report concerning violence or safety issues affecting women or minors.",
-                                        relevantLaws = listOf(
-                                            "BNSS Section 173 (Zero FIR Mandate)",
-                                            "POCSO Section 23 (Minor Identity Protection)"
-                                        ),
+                                        relevantLaws = emptyList(),
                                         sourceName = source,
-                                        sourceUrl = link.ifBlank { "https://news.google.com/" },
+                                        sourceUrl = safeSourceUrl,
                                         timelineUpdates = listOf(
                                             TimelineUpdateItem(
                                                 id = "${id}_init",
                                                 caseId = id,
-                                                dateLabel = pubDate.take(16).ifBlank { "Initial Report" },
+                                                dateLabel = pubDate.ifBlank { "Publication date unavailable" },
                                                 stageBadge = "Initial Report",
                                                 headline = "Published by $source",
                                                 details = "Syndicated dispatch. Follow this report to track confirmed FIR, investigation, or court updates.",
                                                 sourceName = source,
                                                 verificationStatus = VerificationStatus.REPORTED_UNCONFIRMED,
-                                                sourceReferenceUrl = link.ifBlank { "https://news.google.com/" },
-                                                lastCheckedDate = "Checked Today"
+                                                sourceReferenceUrl = safeSourceUrl,
+                                                lastCheckedDate = "Editorial review pending"
                                             )
                                         ),
                                         isLiveRss = true,
                                         verificationStatus = VerificationStatus.REPORTED_UNCONFIRMED,
-                                        lastVerifiedDate = "Syndicated Today",
+                                        lastVerifiedDate = "Not independently verified",
                                         representativeDataSource = matchedLocation.repSourceNote
                                     )
                                 )
@@ -228,6 +246,11 @@ class IndianCrimeNewsRssClient {
         }
         return results
     }
+
+    internal fun parseRssPublicationMillis(raw: String): Long? = runCatching {
+        SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US).apply { isLenient = false }
+            .parse(raw.trim())?.time
+    }.getOrNull()
 
     internal fun normalizeTitleStem(title: String): String {
         return title
@@ -264,21 +287,19 @@ class IndianCrimeNewsRssClient {
         for (state in SurakshaArchiveSeedData.stateJurisdictions) {
             for (district in state.districts) {
                 for (city in district.cities) {
-                    if (text.contains(city.cityName, ignoreCase = true) ||
-                        text.contains(district.districtName, ignoreCase = true)
-                    ) {
+                    if (text.contains(city.cityName, ignoreCase = true)) {
                         return MatchedJurisdiction(
                             stateName = state.stateName,
                             districtName = district.districtName,
                             cityName = city.cityName,
-                            mlaName = city.mlaName,
-                            mlaConstituency = city.mlaConstituency,
-                            mlaParty = city.mlaParty,
-                            mpName = city.mpName,
-                            mpConstituency = city.mpConstituency,
-                            mpParty = city.mpParty,
-                            policeRange = city.policeRange,
-                            repSourceNote = "Election Commission of India (ECI) Constituency Roll"
+                            mlaName = "Not verified",
+                            mlaConstituency = "Constituency not established by RSS",
+                            mlaParty = "Not verified",
+                            mpName = "Not verified",
+                            mpConstituency = "Constituency not established by RSS",
+                            mpParty = "Not verified",
+                            policeRange = "Jurisdiction not independently verified",
+                            repSourceNote = "Location keyword matched; constituency and representative identity have not been independently verified."
                         )
                     }
                 }
