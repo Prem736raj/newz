@@ -121,7 +121,7 @@ class SurakshaViewModel(
     } else {
         firestoreRepository.observeSavedCases(currentUserId)
             .catch { e ->
-                Log.w("SurakshaVM", "Offline fallback for cloud saved_cases", e)
+                Log.w("SurakshaVM", "Cloud saved-case stream unavailable; no account details logged")
                 emit(emptyList())
             }
     }
@@ -131,7 +131,7 @@ class SurakshaViewModel(
     } else {
         firestoreRepository.observeCaseFollowUps(currentUserId)
             .catch { e ->
-                Log.w("SurakshaVM", "Offline fallback for cloud case_updates", e)
+                Log.w("SurakshaVM", "Cloud follow-up stream unavailable; no account details logged")
                 emit(emptyList())
             }
     }
@@ -139,7 +139,7 @@ class SurakshaViewModel(
     // TODO(release blocker): partition Room data by authenticated UID before production.
     private val offlineSavedCasesFlow = offlineDao.observeAllSavedCases()
         .catch { e ->
-            Log.w("SurakshaVM", "Error observing Room saved_cases_offline", e)
+            Log.w("SurakshaVM", "Room saved-case stream unavailable")
             emit(emptyList())
         }
 
@@ -391,15 +391,6 @@ class SurakshaViewModel(
         }
     }
 
-    fun toggleNotificationsEnabled() {
-        _notificationsEnabled.value = !_notificationsEnabled.value
-        _statusBannerMessage.value = if (_notificationsEnabled.value) {
-            "Verified case update alerts enabled."
-        } else {
-            "Verified case update alerts paused."
-        }
-    }
-
     fun loadMoreFeedItems() {
         _visibleFeedLimit.value += 8
     }
@@ -415,7 +406,7 @@ class SurakshaViewModel(
     fun submitCorrectionOrPrivacyReport(caseId: String, issueType: String, details: String) {
         if (details.isBlank()) return
         val existing = _correctionLogs.value[caseId] ?: emptyList()
-        val entry = "Pending Editorial Review ($issueType): ${details.trim()}"
+        val entry = "Unsent local draft ($issueType): ${details.trim()}"
         _correctionLogs.value = _correctionLogs.value + (caseId to (existing + entry))
         _statusBannerMessage.value =
             "Draft recorded on this screen only. No report was submitted or reference ID issued."
