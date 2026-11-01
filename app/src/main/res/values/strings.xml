@@ -1,3 +1,384 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Suraksha Chronicle</string>
+    <string name="app_tagline">Beyond the headline. Follow the facts.</string>
+
+    <!-- Bottom Navigation Tabs -->
+    <string name="nav_home">Home</string>
+    <string name="nav_track">Track</string>
+    <string name="nav_saved">Saved</string>
+    <string name="nav_safety">Safety</string>
+    <string name="nav_mps">MPs</string>
+
+    <!-- Top App Bar & Content Descriptions -->
+    <string name="cd_search_toggle">Search news by keyword</string>
+    <string name="cd_search_articles">Search articles</string>
+    <string name="cd_close_search">Close search</string>
+    <string name="cd_clear_search">Clear search</string>
+    <string name="cd_notifications">Case Update Notifications</string>
+    <string name="cd_sensitive_blur">Toggle Sensitive Content Blur</string>
+    <string name="cd_editorial_standards">Editorial &amp; privacy standards</string>
+    <string name="cd_settings">App Settings &amp; Preferences</string>
+    <string name="cd_sign_out">Sign Out</string>
+    <string name="cd_sign_in">Sign in</string>
+    <string name="cd_archive_new_case">Archive new verified case</string>
+    <string name="cd_refresh_live_rss">Refresh news feed</string>
+    <string name="cd_save_for_offline">Save article</string>
+    <string name="cd_remove_saved">Remove from saved articles</string>
+    <string name="cd_follow_case">Follow case updates</string>
+    <string name="cd_unfollow_case">Following case updates</string>
+    <string name="cd_close_dossier">Back</string>
+    <string name="cd_decrease_font">Decrease font size</string>
+    <string name="cd_increase_font">Increase font size</string>
+    <string name="cd_share_report">Share verified source link</string>
+    <string name="cd_open_source">Open publisher link</string>
+    <string name="cd_call_helpline">Call %1$s</string>
+    <string name="cd_select_location">Select location filter</string>
+    <string name="cd_clear_jurisdiction">Reset location filter</string>
+    <string name="cd_search_locations">Search locations</string>
+    <string name="cd_constituency_info">Constituency Information</string>
+    <string name="cd_collapse_details">Collapse details</string>
+    <string name="cd_expand_details">Expand details</string>
+    <string name="cd_content_advisory">Content Advisory</string>
+    <string name="cd_show_report">Show report</string>
+    <string name="cd_case_update_available">Case update available</string>
+    <string name="cd_case_location">Case location</string>
+    <string name="cd_collapse_timeline">Collapse timeline</string>
+    <string name="cd_expand_timeline">Expand timeline</string>
+    <string name="cd_collapse_representatives">Collapse representatives</string>
+    <string name="cd_expand_representatives">Expand representatives</string>
+    <string name="cd_export_saved">Export saved archive</string>
+    <string name="cd_collapse_guide">Collapse guide</string>
+    <string name="cd_expand_guide">Expand guide</string>
+    <string name="cd_open_portal">Open %1$s</string>
+    <string name="cd_editorial_shield">Editorial Shield</string>
+    <string name="cd_sign_in_google">Sign in with Google</string>
+    <string name="cd_search_mps">Search MPs</string>
+    <string name="cd_filter_state_ut">Filter by State or UT</string>
+    <string name="cd_selected">Selected</string>
+    <string name="cd_back_mps_list">Back to MPs list</string>
+
+    <!-- Search Bar -->
+    <string name="search_placeholder_top">Search headlines, locations, courts, or sources...</string>
+    <string name="search_placeholder_inline">Search headlines, locations, courts, or sources...</string>
+
+    <!-- First-Run Language Onboarding -->
+    <string name="onboarding_lang_badge">MULTILINGUAL PUBLIC INTEREST JOURNALISM</string>
+    <string name="onboarding_lang_title">Choose Your Reading Language</string>
+    <string name="onboarding_lang_subtitle">अपनी भाषा चुनें • All interface labels, verified case dossiers, timelines, helplines, and news updates will switch immediately.</string>
+    <string name="onboarding_tier_a_header">Native News &amp; Full Translation</string>
+    <string name="onboarding_tier_b_header">Translated Feed &amp; Full Interface</string>
+    <string name="onboarding_continue_btn">Continue in %1$s</string>
+
+    <!-- Settings, Notifications & Display Preferences Dialogs -->
+    <string name="notifications_dialog_title">Case Update Alerts</string>
+    <string name="notifications_followed_title">Followed Case Notifications</string>
+    <string name="notifications_followed_subtitle">Notify when chargesheets, court hearings, or verified updates are logged.</string>
+    <string name="notifications_empty_text">You are not following any cases yet. Tap \'Follow\' on any news report or case card to track confirmed milestones.</string>
+    <string name="notifications_following_count">Currently following %1$d case(s):</string>
+    <string name="settings_title">Reading &amp; Display Preferences</string>
+    <string name="settings_theme_label">Appearance</string>
+    <string name="settings_font_scale_label">Text Size</string>
+    <string name="settings_font_scale_small">0.85x Compact</string>
+    <string name="settings_font_scale_standard">1.0x Standard</string>
+    <string name="settings_font_scale_large">1.3x Large</string>
+    <string name="settings_font_scale_max">1.6x Max</string>
+    <string name="settings_language_label">Interface Language</string>
+    <string name="settings_language_hint">Switches UI, case dossiers, timelines, and live news feed immediately without restarting.</string>
+    <string name="settings_sensitive_blur_title">Sensitive Headline Blur</string>
+    <string name="settings_sensitive_blur_subtitle">Require tap-to-read on graphic incident summaries</string>
+    <string name="settings_sign_out_btn">Sign Out of Archive</string>
+    <string name="settings_sign_in_btn">Sign In with Google</string>
+    <string name="action_done">Done</string>
+    <string name="action_close">Close</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_reset_filters">Reset All Filters</string>
+    <string name="action_apply_filters">Apply Filters</string>
+    <string name="action_reset_location_filters">Reset Filters</string>
+
+    <!-- Theme Modes -->
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- Case Stages -->
+    <string name="stage_reported">Incident Reported</string>
+    <string name="stage_fir_filed">FIR Registered</string>
+    <string name="stage_under_investigation">Investigation Ongoing</string>
+    <string name="stage_arrest_made">Arrest / Custody</string>
+    <string name="stage_chargesheet_filed">Chargesheet Filed</string>
+    <string name="stage_court_hearing">Trial / Court Hearing</string>
+    <string name="stage_verdict">Verdict / Judgment</string>
+    <string name="stage_appeal_pending">Appeal / Higher Court</string>
+
+    <!-- Verification Status -->
+    <string name="verification_police_fir">Verified Police Bulletin / FIR</string>
+    <string name="verification_court_order">Official Court Record</string>
+    <string name="verification_multi_source">Multi-Source Corroborated</string>
+    <string name="verification_single_report">Initial Credible Report</string>
+    <string name="verification_developing">Developing — Under Verification</string>
+    <string name="verification_pill_confirmed">Confirmed</string>
+    <string name="verification_pill_reported">Reported</string>
+    <string name="verification_pill_unverified">Unverified</string>
+    <string name="verification_pill_corrected">Corrected</string>
+    <string name="verification_semantics_prefix">Verification status: %1$s</string>
+
+    <!-- Sensitivity Level -->
+    <string name="sensitivity_standard">Standard Public Record</string>
+    <string name="sensitivity_minor_protected">POCSO / Minor Identity Protected</string>
+    <string name="sensitivity_identity_withheld">BNS Sec 72 / Survivor Anonymized</string>
+
+    <!-- Auth & Guest Mode -->
+    <string name="auth_investigative_desk">PUBLIC INTEREST JOURNALISM &amp; CASE ARCHIVE</string>
+    <string name="auth_platform_description">An India-focused journalism and case-follow-up platform covering safety issues, investigations, and court proceedings affecting women, girls, and teenagers.</string>
+    <string name="auth_privacy_notice">Survivor Dignity &amp; Legal Anonymity First: In strict compliance with Bharatiya Nyaya Sanhita (BNS) Section 72 and the POCSO Act, all case dossiers withhold survivor identities and rely exclusively on verified FIRs, judicial orders, and corroborated reports.</string>
+    <string name="auth_feature_news_title">Verified News &amp; Regional Filtering</string>
+    <string name="auth_feature_news_desc">Read factual reports across India or filter by State, District, and City.</string>
+    <string name="auth_feature_timelines_title">Never Forgotten Case Tracker</string>
+    <string name="auth_feature_timelines_desc">Follow FIRs, chargesheets, court hearings, and confirmed judicial developments beyond the original news cycle.</string>
+    <string name="auth_feature_helplines_title">Personal Archive &amp; Emergency Support</string>
+    <string name="auth_feature_helplines_desc">Save cases for offline reading with private notes and access verified national helplines and legal guides.</string>
+    <string name="auth_connecting_google">Signing in...</string>
+    <string name="auth_sign_in_google">Continue with Google</string>
+    <string name="auth_continue_guest">Browse as Guest (News, MPs &amp; Helplines)</string>
+    <string name="auth_sync_note">Your saved cases and followed timelines are encrypted and synced across your devices.</string>
+    <string name="auth_failed_prefix">Authentication failed: %1$s</string>
+    <string name="guest_sign_in_required_title">Sign In to Save &amp; Track Cases</string>
+    <string name="guest_sign_in_required_body">Browsing news, case timelines, MP records, and emergency helplines is available without signing in. To bookmark cases, follow developments, or log verified updates, please sign in with Google.</string>
+    <string name="guest_banner_text">Guest Mode • Sign in to save cases &amp; sync timelines</string>
+    <string name="guest_sign_in_action">Sign In</string>
+
+    <!-- Home / Front Page Categories & Feed -->
+    <string name="home_cat_latest">Latest</string>
+    <string name="home_cat_following">Following</string>
+    <string name="home_cat_case_updates">Case Updates</string>
+    <string name="home_cat_states">States</string>
+    <string name="home_cat_safety">Safety</string>
+    <string name="home_cat_legal_updates">Legal Updates</string>
+    <string name="home_empty_title">No verified reports match this filter</string>
+    <string name="home_empty_subtitle">Reset the location or category filters to view all verified national reports.</string>
+    <string name="home_load_more_format">Load More Reports (%1$d remaining)</string>
+
+    <!-- Machine Translation Indicators -->
+    <string name="translation_badge_auto">Translated automatically</string>
+    <string name="translation_view_original">View original</string>
+    <string name="translation_view_translated">View translation</string>
+    <string name="translation_in_progress">Translating to %1$s…</string>
+
+    <!-- Location Selector & Bottom Sheet -->
+    <string name="jurisdiction_all_india">All India</string>
+    <string name="jurisdiction_all_districts">All Districts</string>
+    <string name="jurisdiction_all_cities">All Cities</string>
+    <string name="jurisdiction_all_states">All States</string>
+    <string name="jurisdiction_all_categories">All Categories</string>
+    <string name="location_sheet_title">Filter by Location</string>
+    <string name="location_sheet_subtitle">Select State/UT, District, and City to filter reports</string>
+    <string name="location_sheet_search_placeholder">Search state, district, or city...</string>
+    <string name="location_field_state_ut">State / Union Territory</string>
+    <string name="location_field_state_short">State / UT</string>
+    <string name="location_field_district">District</string>
+    <string name="location_field_city">City / Locality</string>
+    <string name="location_field_city_constituency">City / Constituency</string>
+    <string name="location_placeholder_select_state_first">Select a State/UT first</string>
+    <string name="location_placeholder_select_district_first">Select a District first</string>
+    <string name="location_placeholder_select_state">Select State</string>
+    <string name="location_placeholder_select_district">Select District</string>
+    <string name="location_placeholder_select_city">Select City</string>
+    <string name="location_quick_select_state">Quick Select State</string>
+
+    <!-- Constituency Representative Card -->
+    <string name="rep_card_title_format">Constituency Representatives • %1$s</string>
+    <string name="rep_card_mla_mp_compact">MLA: %1$s (%2$s) • MP: %3$s (%4$s)</string>
+    <string name="rep_card_assembly_format">Assembly (MLA): %1$s — %2$s (%3$s)</string>
+    <string name="rep_card_loksabha_format">Lok Sabha (MP): %1$s — %2$s (%3$s)</string>
+    <string name="rep_card_police_format">Police Jurisdiction: %1$s (%2$s, %3$s)</string>
+    <string name="rep_card_source_disclaimer">Source: Election Commission of India (ECI) Official Roll • Last verified Oct 2026. Listed for civic reference; inclusion does not imply personal liability for individual offences.</string>
+
+    <!-- Editorial News Card & Case Dossier Card -->
+    <string name="card_featured_badge">Featured Dossier</string>
+    <string name="card_show_report">Show Report</string>
+    <string name="card_show_case_summary">Show Case Summary</string>
+    <string name="card_latest_update_format">Latest Update (%1$s) • %2$s</string>
+    <string name="card_original_report_format">Original report: %1$s (%2$d days tracked) • Last verified: %3$s</string>
+    <string name="card_action_following">Following</string>
+    <string name="card_action_follow_case">Follow Case</string>
+    <string name="card_action_saved">Saved</string>
+    <string name="card_action_save">Save</string>
+    <string name="card_action_open_timeline">Open Timeline</string>
+    <string name="card_timeline_milestones_format">Case Timeline (%1$d Milestones)</string>
+    <string name="card_action_hide">Hide</string>
+    <string name="card_action_view">View</string>
+    <string name="card_submit_timeline_update">Submit Timeline Update</string>
+    <string name="card_timeline_source_format">Source: %1$s • %2$s</string>
+    <string name="card_confirmed_status_format">Confirmed Status: %1$s</string>
+    <string name="card_milestones_count_format">%1$d Milestones</string>
+
+    <!-- Case Tracker Screen -->
+    <string name="tracker_title">Never Forgotten • Case Tracker</string>
+    <string name="tracker_subtitle">Follow investigations, chargesheets, and court proceedings beyond the initial news cycle.</string>
+    <string name="tracker_count_format">%1$d Tracked Cases</string>
+    <string name="tracker_tab_all">All Cases</string>
+    <string name="tracker_tab_following">Following</string>
+    <string name="tracker_tab_recent">Recently Updated</string>
+    <string name="tracker_tab_awaiting">Awaiting Updates</string>
+    <string name="tracker_tab_resolved">Judgment / Resolved</string>
+    <string name="tracker_empty_title">No cases in this view</string>
+    <string name="tracker_empty_subtitle">Switch back to \'All Cases\' or follow cases from the Home feed.</string>
+    <string name="tracker_show_all_btn">Show All Tracked Cases</string>
+
+    <!-- Saved & Followed Screen -->
+    <string name="saved_title">Saved &amp; Followed Archive</string>
+    <string name="saved_subtitle">Cached on device for offline reading and synced to your account when online.</string>
+    <string name="saved_export_btn">Export</string>
+    <string name="saved_export_chooser_title">Export Saved Archive</string>
+    <string name="saved_add_case_btn">Add Case</string>
+    <string name="saved_tab_articles">Saved Articles</string>
+    <string name="saved_tab_followed">Followed Cases</string>
+    <string name="saved_tab_submitted">Submitted Dossiers</string>
+    <string name="saved_search_placeholder">Search saved items or private notes...</string>
+    <string name="saved_sort_most_updates">Most Updates</string>
+    <string name="saved_sort_latest_saved">Latest Saved</string>
+    <string name="saved_empty_title">No saved items in this section</string>
+    <string name="saved_empty_subtitle">Bookmark articles from the Home feed to read them offline or follow their case timelines.</string>
+
+    <!-- Archive New Case Modal -->
+    <string name="archive_dialog_title">Archive Case Dossier</string>
+    <string name="archive_dialog_privacy_note">Privacy &amp; Moderation Policy: Do not enter names, school roll numbers, or identifying details of minors or survivors. User-archived dossiers are saved to your personal vault and labeled \'Awaiting Verification\'.</string>
+    <string name="archive_field_headline">Neutral Case Title (Required)</string>
+    <string name="archive_field_summary">Factual Summary &amp; Source Reference (Required)</string>
+    <string name="archive_field_details">Additional Confirmed Details (Optional)</string>
+    <string name="archive_field_private_note">Private Note (Visible only to you)</string>
+    <string name="archive_submit_btn">Save to Archive</string>
+
+    <!-- Safety, Helplines & Legal Rights Screen -->
+    <string name="safety_title">Safety, Helplines &amp; Legal Rights</string>
+    <string name="safety_subtitle">Verified emergency support numbers, statutory reporting guides, and public-safety resources.</string>
+    <string name="safety_tab_emergency">Emergency Support</string>
+    <string name="safety_tab_rights">Know Your Rights</string>
+    <string name="safety_tab_civic">Safety &amp; Representatives</string>
+    <string name="safety_helpline_notice">All helplines below are official toll-free or statutory government numbers operated by MHA, MWCD, and the National Commission for Women (NCW).</string>
+    <string name="safety_official_source_format">Official Source: Govt. of India (%1$s)</string>
+    <string name="safety_call_btn">Call</string>
+    <string name="safety_legal_notice_title">Public Legal Information Notice</string>
+    <string name="safety_legal_notice_body">The summaries below provide general awareness of statutory protections under the Bharatiya Nagarik Suraksha Sanhita (BNSS), Bharatiya Nyaya Sanhita (BNS), and POCSO Act. They do not constitute personalized legal counsel. For free legal aid, contact NALSA Helpline 15100.</string>
+    <string name="safety_statutory_ref_format">Statutory Reference: %1$s</string>
+    <string name="safety_portals_title">Official Government Reporting Portals</string>
+    <string name="safety_portal_ncw_title">National Commission for Women (NCW)</string>
+    <string name="safety_portal_ncw_desc">Online complaint registration &amp; 24x7 women safety cell</string>
+    <string name="safety_portal_cyber_title">National Cyber Crime Reporting Portal</string>
+    <string name="safety_portal_cyber_desc">Report online harassment, morphing, blackmail, or stalking (Helpline 1930)</string>
+    <string name="safety_portal_ncpcr_title">NCPCR POCSO e-Box (Child Protection)</string>
+    <string name="safety_portal_ncpcr_desc">Confidential reporting of offences against children and school safety lapses</string>
+    <string name="safety_standards_title">School, Campus &amp; Online Safety Standards</string>
+    <string name="safety_bullet_1_title">School &amp; Classroom Access Control</string>
+    <string name="safety_bullet_1_body">Under NCPCR School Safety Guidelines, schools must verify all visitors at perimeter gates, prohibit unauthorized weapons or tools on campus, and maintain functional CCTV in corridors.</string>
+    <string name="safety_bullet_2_title">University &amp; Workplace Internal Committees (POSH)</string>
+    <string name="safety_bullet_2_body">Every higher-education institution and workplace with 10+ employees is legally required to maintain an Internal Complaints Committee (ICC) and display contact details prominently.</string>
+    <string name="safety_bullet_3_title">Digital &amp; Cyber Evidence Preservation</string>
+    <string name="safety_bullet_3_body">In cases of online threats or stalking, preserve screenshots with visible URLs/timestamps and report immediately via 1930 or cybercrime.gov.in before blocking accounts.</string>
+    <string name="safety_rep_directory_title">Constituency Representative Directory</string>
+    <string name="safety_rep_directory_subtitle">Look up verified MLA &amp; MP records by State, District, and City</string>
+    <string name="safety_view_reports_in_state">View Reports in %1$s</string>
+
+    <!-- Case Dossier Detail Screen -->
+    <string name="dossier_share_chooser_title">Share Verified Report</string>
+    <string name="dossier_source_prefix">Source: %1$s</string>
+    <string name="dossier_published_verified_format">Published: %1$s • Last verified: %2$s</string>
+    <string name="dossier_original_source_btn">Original Source</string>
+    <string name="dossier_btn_following_case">Following Case</string>
+    <string name="dossier_btn_follow_case">Follow Case</string>
+    <string name="dossier_btn_saved_archive">Saved in Archive</string>
+    <string name="dossier_btn_save_article">Save Article</string>
+    <string name="dossier_edit_private_note">Edit Private Note</string>
+    <string name="dossier_add_private_note">Add Private Note</string>
+    <string name="dossier_offline_cache_hint">Saved items are cached for offline reading</string>
+    <string name="dossier_private_note_label">Private Note (Stored in your personal archive)</string>
+    <string name="dossier_key_summary_header">Key Factual Summary</string>
+    <string name="dossier_background_header">Confirmed Case Background &amp; Reporting</string>
+    <string name="dossier_legal_privacy_note">Editorial &amp; Legal Note: To comply with POCSO Section 23 and BNS Section 72, identifying details of survivors and minors are strictly withheld. Under Indian law, an FIR, remand, or chargesheet records a procedural stage and does not establish guilt prior to court conviction.</string>
+    <string name="dossier_timeline_title">Case Timeline</string>
+    <string name="dossier_timeline_subtitle_format">Chronological record • Last verified %1$s</string>
+    <string name="dossier_log_update_btn">Log Update</string>
+    <string name="dossier_sort_chronological">Chronological (Oldest first)</string>
+    <string name="dossier_sort_latest">Latest first</string>
+    <string name="dossier_timeline_meta_format">Stage: %1$s • Source: %2$s • %3$s</string>
+    <string name="dossier_reference_btn">Reference</string>
+    <string name="dossier_jurisdiction_title">Jurisdiction &amp; Elected Representatives</string>
+    <string name="dossier_mla_mp_line_format">MLA: %1$s (%2$s)  •  MP: %3$s (%4$s)</string>
+    <string name="dossier_mla_detail_format">Legislative Assembly (MLA): %1$s</string>
+    <string name="dossier_constituency_party_format">Constituency: %1$s • Party: %2$s</string>
+    <string name="dossier_mp_detail_format">Lok Sabha (MP): %1$s</string>
+    <string name="dossier_police_jurisdiction_format">Police Jurisdiction: %1$s</string>
+    <string name="dossier_rep_disclaimer_format">Data Source: %1$s • Last verified: %2$s. Representatives are displayed for civic oversight; inclusion does not imply personal responsibility for individual criminal acts.</string>
+    <string name="dossier_relevant_laws_title">Relevant Legal Provisions</string>
+    <string name="dossier_related_reporting_title">Related Reporting &amp; Connected Cases</string>
+    <string name="dossier_corrections_title">Verification &amp; Corrections History</string>
+    <string name="dossier_corrections_status_format">Last verified: %1$s • Status: %2$s</string>
+    <string name="dossier_report_issue_btn">Report Issue</string>
+    <string name="dossier_audit_bullet_1_format">• Editorial Audit: Primary source attribution (%1$s) and POCSO/BNS redaction verified (%2$s).</string>
+    <string name="dossier_audit_bullet_2">• Publisher Licensing: Factual summary published for public-interest tracking; full copyright remains with the original publisher.</string>
+    <string name="dossier_audit_no_corrections">• Corrections Log: No formal corrections or retractions issued to date.</string>
+    <string name="dossier_followup_dialog_title">Submit Case Timeline Update</string>
+    <string name="dossier_followup_dialog_note">User-submitted updates are saved to your archive and labeled \'Submitted • Awaiting Verification\' until confirmed against official police or court records. Never include identifying information about minors.</string>
+    <string name="dossier_followup_presets_label">Quick Milestone Presets:</string>
+    <string name="dossier_followup_date_label">Date or Milestone Label</string>
+    <string name="dossier_followup_stage_label">Confirmed Procedural Stage:</string>
+    <string name="dossier_followup_headline_label">Factual Update Summary (Required)</string>
+    <string name="dossier_followup_details_label">Details &amp; Official Source / Order Reference (Required)</string>
+    <string name="dossier_followup_submit_btn">Save Timeline Update</string>
+    <string name="dossier_followup_day_update_format">Day %1$d Update</string>
+    <string name="dossier_preset_30">1 Month Follow-Up • Day 30</string>
+    <string name="dossier_preset_60">2 Months Follow-Up • Day 60</string>
+    <string name="dossier_preset_90">3 Months Follow-Up • Day 90</string>
+    <string name="dossier_preset_180">6 Months Follow-Up • Day 180</string>
+    <string name="dossier_preset_court">Court / Investigation Update</string>
+    <string name="dossier_correction_dialog_title">Report Correction or Privacy Concern</string>
+    <string name="dossier_correction_dialog_prefix">Report an inaccuracy or request redaction for: %1$s</string>
+    <string name="dossier_correction_field_label">Describe the correction or official source URL</string>
+    <string name="dossier_correction_submit_btn">Submit Report</string>
+    <string name="dossier_issue_factual">Factual Correction</string>
+    <string name="dossier_issue_privacy">Privacy / Minor Identity Protection</string>
+    <string name="dossier_issue_court">Updated Court / Police Order</string>
+    <string name="dossier_issue_rep">Representative Mapping Correction</string>
+
+    <!-- MPs of India Feature -->
+    <string name="mps_loading_text">Loading Members of Parliament directory…</string>
+    <string name="mps_error_title">Unable to load MP data</string>
+    <string name="mps_title">MPs of India</string>
+    <string name="mps_data_as_of">Data as of %1$s</string>
+    <string name="mps_house_lok_sabha">Lok Sabha</string>
+    <string name="mps_house_rajya_sabha">Rajya Sabha</string>
+    <string name="mps_sitting_vacant_format">%1$d Sitting · %2$d Vacant</string>
+    <string name="mps_search_placeholder_lok">Search MP, constituency, state, or party…</string>
+    <string name="mps_search_placeholder_rajya">Search MP, state, or party…</string>
+    <string name="mps_showing_lok_format">Showing %1$d of %2$d Lok Sabha seats</string>
+    <string name="mps_showing_rajya_format">Showing %1$d of %2$d sitting Rajya Sabha MPs</string>
+    <string name="mps_members_count_one">%1$d member</string>
+    <string name="mps_members_count_other">%1$d members</string>
+    <string name="mps_state_sheet_title">Filter by State / UT</string>
+    <string name="mps_vacant_seat">Vacant</string>
+    <string name="mps_vacant_seat_detail">Vacant Seat</string>
+    <string name="mps_unknown_mp">Unknown MP</string>
+    <string name="mps_independent">Independent</string>
+    <string name="mps_nominated">Nominated</string>
+    <string name="mps_term_ends_format">Term ends %1$d</string>
+    <string name="mps_term_unavailable">Term year unavailable</string>
+    <string name="mps_empty_title">No matching Members of Parliament</string>
+    <string name="mps_empty_subtitle">Try searching for another MP name, constituency, state, or party filter.</string>
+    <string name="mps_empty_reset_btn">Reset Search &amp; Filters</string>
+    <string name="mps_detail_title">Member of Parliament Profile</string>
+    <string name="mps_detail_field_house">House</string>
+    <string name="mps_detail_field_constituency">Constituency</string>
+    <string name="mps_detail_constituency_no_format">%1$s (No. %2$d)</string>
+    <string name="mps_detail_field_state">State / UT</string>
+    <string name="mps_detail_field_reservation">Reservation</string>
+    <string name="mps_detail_field_party">Party</string>
+    <string name="mps_detail_field_gender">Gender</string>
+    <string name="mps_detail_field_term_end">Term End Year</string>
+    <string name="mps_detail_reason_vacancy">Reason for Vacancy</string>
+    <string name="mps_detail_notes">Notes</string>
+    <string name="mps_public_sources_footer">Data compiled from public sources. May not reflect the latest changes.</string>
 </resources>

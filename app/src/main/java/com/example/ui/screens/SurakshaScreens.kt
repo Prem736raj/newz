@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,9 +12,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,10 +39,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
@@ -60,7 +58,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,7 +66,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -79,9 +75,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.data.model.CaseDossier
 import com.example.data.model.CaseStage
 import com.example.data.model.CityJurisdiction
@@ -97,13 +95,13 @@ import com.example.ui.components.EditorialNewsCard
 import com.example.ui.components.LocationFilterBottomSheet
 import com.example.ui.viewmodel.SurakshaFilterState
 
-private enum class HomeNewsCategory(val label: String) {
-    LATEST("Latest"),
-    FOLLOWING("Following"),
-    CASE_UPDATES("Case Updates"),
-    STATES("States"),
-    SAFETY("Safety"),
-    LEGAL_UPDATES("Legal Updates")
+private enum class HomeNewsCategory(@StringRes val labelRes: Int) {
+    LATEST(R.string.home_cat_latest),
+    FOLLOWING(R.string.home_cat_following),
+    CASE_UPDATES(R.string.home_cat_case_updates),
+    STATES(R.string.home_cat_states),
+    SAFETY(R.string.home_cat_safety),
+    LEGAL_UPDATES(R.string.home_cat_legal_updates)
 }
 
 /**
@@ -116,8 +114,8 @@ fun HomeSearchableTopAppBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    titleText: String = "Suraksha Chronicle",
-    subtitleText: String = "Beyond the headline. Follow the facts.",
+    titleText: String = stringResource(R.string.app_name),
+    subtitleText: String = stringResource(R.string.app_tagline),
     showSearchInput: Boolean = true,
     onSearchButtonClick: () -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {}
@@ -161,7 +159,7 @@ fun HomeSearchableTopAppBar(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "Search news by keyword",
+                            contentDescription = stringResource(R.string.cd_search_toggle),
                             tint = if (searchQuery.isNotBlank()) {
                                 MaterialTheme.colorScheme.primary
                             } else {
@@ -187,7 +185,7 @@ fun HomeSearchableTopAppBar(
                     onValueChange = onSearchQueryChange,
                     placeholder = {
                         Text(
-                            text = "Search headlines, locations, courts, or sources...",
+                            text = stringResource(R.string.search_placeholder_top),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -195,7 +193,7 @@ fun HomeSearchableTopAppBar(
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "Search articles"
+                            contentDescription = stringResource(R.string.cd_search_articles)
                         )
                     },
                     trailingIcon = {
@@ -206,7 +204,7 @@ fun HomeSearchableTopAppBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear search"
+                                    contentDescription = stringResource(R.string.cd_clear_search)
                                 )
                             }
                         }
@@ -365,223 +363,230 @@ fun FrontPageCaseFeedScreen(
                 item {
                     Column(
                         modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CompactLocationSelectorPill(
-                        selectedState = filterState.selectedState,
-                        selectedDistrict = filterState.selectedDistrict,
-                        selectedCity = filterState.selectedCity,
-                        onClick = { showLocationSheet = true },
-                        onReset = { onResetFilters() }
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        if (isRefreshingLive) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                        TextButton(
-                            onClick = onRefreshLive,
-                            modifier = Modifier
-                                .heightIn(min = 40.dp)
-                                .testTag("refresh_live_rss_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh news feed",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Refresh", style = MaterialTheme.typography.labelMedium, maxLines = 1)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Horizontally scrollable News Categories row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    HomeNewsCategory.entries.forEach { category ->
-                        val isSelected = selectedCategory == category
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedCategory = category },
-                            label = {
-                                Text(
-                                    text = category.label,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    maxLines = 1
-                                )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            modifier = Modifier.testTag("home_category_chip_${category.name.lowercase()}")
-                        )
-                    }
-                }
-            }
-        }
-
-        // Compact Constituency Representative card ONLY when a specific city/district is selected
-        if (activeRepresentative != null && filterState.selectedState != "All India") {
-            item {
-                CompactRepresentativeCard(
-                    cityRep = activeRepresentative,
-                    stateName = filterState.selectedState,
-                    districtName = filterState.selectedDistrict,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                )
-            }
-        }
-
-        // Subtle Sync / Offline status note if present
-        if (feedSyncNote != null) {
-            item {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = feedSyncNote,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TextButton(onClick = onRefreshLive) {
-                            Text("Retry", maxLines = 1)
-                        }
-                    }
-                }
-            }
-        }
-
-            // Loading Skeletons when refreshing live feed
-            if (isRefreshingLive) {
-                item {
-                    EditorialLoadingSkeletonCard()
-                }
-            }
-
-            // Empty State
-            if (paginatedArticles.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .padding(top = 8.dp, bottom = 4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = "No verified reports match this filter",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Reset the location or category filters to view all verified national reports.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-                        OutlinedButton(
-                            onClick = {
-                                selectedCategory = HomeNewsCategory.LATEST
-                                onResetFilters()
-                            },
-                            modifier = Modifier.heightIn(min = 48.dp)
-                        ) {
-                            Text("Reset All Filters", maxLines = 1)
-                        }
-                    }
-                }
-            }
-        } else {
-            // Main News Feed: Featured first story + compact EditorialNewsCards
-            itemsIndexed(paginatedArticles, key = { _, item -> item.id }) { index, dossier ->
-                val isBlurred = globalBlur && !revealedIds.contains(dossier.id)
-                EditorialNewsCard(
-                    dossier = dossier,
-                    isBlurred = isBlurred,
-                    onRevealBlur = { onRevealBlur(dossier.id) },
-                    onOpenDetail = { onOpenDossier(dossier) },
-                    onToggleSave = { onToggleSaveForLife(dossier) },
-                    onToggleFollow = { onToggleFollow(dossier) },
-                    isFeatured = index == 0 && selectedCategory == HomeNewsCategory.LATEST
-                )
-            }
-
-            // Pagination ("Load More")
-            if (displayedArticles.size > paginatedArticles.size) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        OutlinedButton(
-                            onClick = onLoadMore,
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 48.dp)
-                                .testTag("load_more_articles_button"),
-                            shape = RoundedCornerShape(10.dp)
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Load More Reports (${displayedArticles.size - paginatedArticles.size} remaining)",
-                                maxLines = 1
+                            CompactLocationSelectorPill(
+                                selectedState = filterState.selectedState,
+                                selectedDistrict = filterState.selectedDistrict,
+                                selectedCity = filterState.selectedCity,
+                                onClick = { showLocationSheet = true },
+                                onReset = { onResetFilters() }
                             )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (isRefreshingLive) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                                TextButton(
+                                    onClick = onRefreshLive,
+                                    modifier = Modifier
+                                        .heightIn(min = 40.dp)
+                                        .testTag("refresh_live_rss_button")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = stringResource(R.string.cd_refresh_live_rss),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.action_refresh),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Horizontally scrollable News Categories row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            HomeNewsCategory.entries.forEach { category ->
+                                val isSelected = selectedCategory == category
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { selectedCategory = category },
+                                    label = {
+                                        Text(
+                                            text = stringResource(category.labelRes),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            maxLines = 1
+                                        )
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    modifier = Modifier.testTag("home_category_chip_${category.name.lowercase()}")
+                                )
+                            }
                         }
                     }
                 }
-            }
-        }
+
+                // Compact Constituency Representative card ONLY when a specific city/district is selected
+                if (activeRepresentative != null && filterState.selectedState != "All India") {
+                    item {
+                        CompactRepresentativeCard(
+                            cityRep = activeRepresentative,
+                            stateName = filterState.selectedState,
+                            districtName = filterState.selectedDistrict,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+
+                // Subtle Sync / Offline status note if present
+                if (feedSyncNote != null) {
+                    item {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = feedSyncNote,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TextButton(onClick = onRefreshLive) {
+                                    Text(stringResource(R.string.action_retry), maxLines = 1)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Loading Skeletons when refreshing live feed
+                if (isRefreshingLive) {
+                    item {
+                        EditorialLoadingSkeletonCard()
+                    }
+                }
+
+                // Empty State
+                if (paginatedArticles.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Shield,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = stringResource(R.string.home_empty_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = stringResource(R.string.home_empty_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        selectedCategory = HomeNewsCategory.LATEST
+                                        onResetFilters()
+                                    },
+                                    modifier = Modifier.heightIn(min = 48.dp)
+                                ) {
+                                    Text(stringResource(R.string.action_reset_filters), maxLines = 1)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Main News Feed: Featured first story + compact EditorialNewsCards
+                    itemsIndexed(paginatedArticles, key = { _, item -> item.id }) { index, dossier ->
+                        val isBlurred = globalBlur && !revealedIds.contains(dossier.id)
+                        EditorialNewsCard(
+                            dossier = dossier,
+                            isBlurred = isBlurred,
+                            onRevealBlur = { onRevealBlur(dossier.id) },
+                            onOpenDetail = { onOpenDossier(dossier) },
+                            onToggleSave = { onToggleSaveForLife(dossier) },
+                            onToggleFollow = { onToggleFollow(dossier) },
+                            isFeatured = index == 0 && selectedCategory == HomeNewsCategory.LATEST
+                        )
+                    }
+
+                    // Pagination ("Load More")
+                    if (displayedArticles.size > paginatedArticles.size) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                OutlinedButton(
+                                    onClick = onLoadMore,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 48.dp)
+                                        .testTag("load_more_articles_button"),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.home_load_more_format,
+                                            displayedArticles.size - paginatedArticles.size
+                                        ),
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -605,13 +610,16 @@ fun FrontPageCaseFeedScreen(
     }
 }
 
-private enum class TrackerFilterTab(val label: String) {
-    ALL("All Cases"),
-    FOLLOWING("Following"),
-    RECENTLY_UPDATED("Recently Updated"),
-    AWAITING_UPDATES("Awaiting Updates"),
-    CLOSED_RESOLVED("Judgment / Resolved")
+private enum class TrackerFilterTab(@StringRes val labelRes: Int) {
+    ALL(R.string.tracker_tab_all),
+    FOLLOWING(R.string.tracker_tab_following),
+    RECENTLY_UPDATED(R.string.tracker_tab_recent),
+    AWAITING_UPDATES(R.string.tracker_tab_awaiting),
+    CLOSED_RESOLVED(R.string.tracker_tab_resolved)
 }
+
+private const val ALL_CATEGORIES_KEY = "All Categories"
+private const val ALL_STATES_KEY = "All States"
 
 /**
  * Redesigned "Never Forgotten" Case Tracker Screen (Track Tab):
@@ -644,12 +652,14 @@ fun FollowUpTrackerScreen(
     onResetFilters: () -> Unit = { onSelectState("All India") }
 ) {
     var selectedTrackerTab by remember { mutableStateOf(TrackerFilterTab.ALL) }
-    var selectedCategoryFilter by remember { mutableStateOf("All Categories") }
+    var selectedCategoryFilter by remember { mutableStateOf(ALL_CATEGORIES_KEY) }
     var activeTimelineUpdateDossier by remember { mutableStateOf<CaseDossier?>(null) }
     var showLocationSheet by remember { mutableStateOf(false) }
 
+    val allCategoriesLabel = stringResource(R.string.jurisdiction_all_categories)
+
     val availableCategories = remember(allDossiers) {
-        listOf("All Categories") + allDossiers.map { it.crimeCategory }.distinct()
+        listOf(ALL_CATEGORIES_KEY) + allDossiers.map { it.crimeCategory }.distinct()
     }
 
     val filteredCases = remember(allDossiers, selectedTrackerTab, selectedCategoryFilter) {
@@ -666,7 +676,7 @@ fun FollowUpTrackerScreen(
                 it.caseStage == CaseStage.VERDICT_DELIVERED
             }
         }
-        if (selectedCategoryFilter == "All Categories") {
+        if (selectedCategoryFilter == ALL_CATEGORIES_KEY) {
             statusFiltered
         } else {
             statusFiltered.filter { it.crimeCategory.equals(selectedCategoryFilter, ignoreCase = true) }
@@ -693,12 +703,12 @@ fun FollowUpTrackerScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Never Forgotten • Case Tracker",
+                            text = stringResource(R.string.tracker_title),
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Follow investigations, chargesheets, and court proceedings beyond the initial news cycle.",
+                            text = stringResource(R.string.tracker_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -721,7 +731,7 @@ fun FollowUpTrackerScreen(
                     )
 
                     Text(
-                        text = "${filteredCases.size} Tracked Cases",
+                        text = stringResource(R.string.tracker_count_format, filteredCases.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -741,7 +751,7 @@ fun FollowUpTrackerScreen(
                             onClick = { selectedTrackerTab = tab },
                             label = {
                                 Text(
-                                    text = tab.label,
+                                    text = stringResource(tab.labelRes),
                                     style = MaterialTheme.typography.labelLarge,
                                     maxLines = 1
                                 )
@@ -764,12 +774,13 @@ fun FollowUpTrackerScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     availableCategories.forEach { cat ->
+                        val displayCat = if (cat == ALL_CATEGORIES_KEY) allCategoriesLabel else cat
                         FilterChip(
                             selected = selectedCategoryFilter == cat,
                             onClick = { selectedCategoryFilter = cat },
                             label = {
                                 Text(
-                                    text = cat,
+                                    text = displayCat,
                                     style = MaterialTheme.typography.labelMedium,
                                     maxLines = 1
                                 )
@@ -798,12 +809,12 @@ fun FollowUpTrackerScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "No cases in this view",
+                            text = stringResource(R.string.tracker_empty_title),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Switch back to 'All Cases' or follow cases from the Home feed.",
+                            text = stringResource(R.string.tracker_empty_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -812,7 +823,7 @@ fun FollowUpTrackerScreen(
                             onClick = { selectedTrackerTab = TrackerFilterTab.ALL },
                             modifier = Modifier.heightIn(min = 48.dp)
                         ) {
-                            Text("Show All Tracked Cases", maxLines = 1)
+                            Text(stringResource(R.string.tracker_show_all_btn), maxLines = 1)
                         }
                     }
                 }
@@ -865,10 +876,10 @@ fun FollowUpTrackerScreen(
     }
 }
 
-private enum class SavedSectionTab(val label: String) {
-    SAVED_ARTICLES("Saved Articles"),
-    FOLLOWED_CASES("Followed Cases"),
-    ARCHIVED_DOSSIERS("Submitted Dossiers")
+private enum class SavedSectionTab(@StringRes val labelRes: Int) {
+    SAVED_ARTICLES(R.string.saved_tab_articles),
+    FOLLOWED_CASES(R.string.saved_tab_followed),
+    ARCHIVED_DOSSIERS(R.string.saved_tab_submitted)
 }
 
 /**
@@ -909,9 +920,13 @@ fun PermanentVaultScreen(
     var showCreateModal by remember { mutableStateOf(false) }
     var selectedSection by remember { mutableStateOf(SavedSectionTab.SAVED_ARTICLES) }
     var searchQuery by remember { mutableStateOf("") }
-    var selectedStateFilter by remember { mutableStateOf("All States") }
+    var selectedStateFilter by remember { mutableStateOf(ALL_STATES_KEY) }
     var sortByLatestUpdated by remember { mutableStateOf(false) }
     var activeTimelineUpdateDossier by remember { mutableStateOf<CaseDossier?>(null) }
+
+    val allStatesLabel = stringResource(R.string.jurisdiction_all_states)
+    val exportChooserTitle = stringResource(R.string.saved_export_chooser_title)
+    val appTitle = stringResource(R.string.app_name)
 
     val baseItems = remember(savedDossiers, followedDossiers, selectedSection) {
         when (selectedSection) {
@@ -924,11 +939,11 @@ fun PermanentVaultScreen(
     }
 
     val availableSavedStates = remember(baseItems) {
-        listOf("All States") + baseItems.map { it.stateName }.distinct()
+        listOf(ALL_STATES_KEY) + baseItems.map { it.stateName }.distinct()
     }
 
     val displayedItems = remember(baseItems, searchQuery, selectedStateFilter, sortByLatestUpdated) {
-        val stateFiltered = if (selectedStateFilter == "All States") {
+        val stateFiltered = if (selectedStateFilter == ALL_STATES_KEY) {
             baseItems
         } else {
             baseItems.filter { it.stateName.equals(selectedStateFilter, ignoreCase = true) }
@@ -970,12 +985,12 @@ fun PermanentVaultScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Saved & Followed Archive",
+                            text = stringResource(R.string.saved_title),
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Cached on device for offline reading and synced to your account when online.",
+                            text = stringResource(R.string.saved_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -985,25 +1000,24 @@ fun PermanentVaultScreen(
                         OutlinedButton(
                             onClick = {
                                 val exportText = buildString {
-                                    appendLine("SURAKSHA CHRONICLE • SAVED ARCHIVE EXPORT")
-                                    appendLine("Total Saved Items: ${savedDossiers.size}")
+                                    appendLine("$appTitle (${savedDossiers.size})")
                                     appendLine()
                                     savedDossiers.forEachIndexed { index, item ->
                                         appendLine("${index + 1}. ${item.title}")
-                                        appendLine("   Location: ${item.cityName}, ${item.stateName}")
-                                        appendLine("   Status: ${item.caseStage.label}")
+                                        appendLine("   ${item.cityName}, ${item.stateName}")
+                                        appendLine("   ${context.getString(item.caseStage.labelRes)}")
                                         if (item.personalNotes.isNotBlank()) {
-                                            appendLine("   Private Note: ${item.personalNotes}")
+                                            appendLine("   ${item.personalNotes}")
                                         }
                                         appendLine()
                                     }
                                 }
                                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
-                                    putExtra(Intent.EXTRA_SUBJECT, "Suraksha Chronicle Saved Archive Export")
+                                    putExtra(Intent.EXTRA_SUBJECT, exportChooserTitle)
                                     putExtra(Intent.EXTRA_TEXT, exportText)
                                 }
-                                context.startActivity(Intent.createChooser(sendIntent, "Export Saved Archive"))
+                                context.startActivity(Intent.createChooser(sendIntent, exportChooserTitle))
                             },
                             modifier = Modifier
                                 .heightIn(min = 44.dp)
@@ -1012,11 +1026,11 @@ fun PermanentVaultScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
-                                contentDescription = "Export saved archive",
+                                contentDescription = stringResource(R.string.cd_export_saved),
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export", maxLines = 1)
+                            Text(stringResource(R.string.saved_export_btn), maxLines = 1)
                         }
 
                         Button(
@@ -1032,7 +1046,7 @@ fun PermanentVaultScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add Case", maxLines = 1)
+                            Text(stringResource(R.string.saved_add_case_btn), maxLines = 1)
                         }
                     }
                 }
@@ -1052,7 +1066,7 @@ fun PermanentVaultScreen(
                             onClick = { selectedSection = tab },
                             label = {
                                 Text(
-                                    text = tab.label,
+                                    text = stringResource(tab.labelRes),
                                     style = MaterialTheme.typography.labelLarge,
                                     maxLines = 1
                                 )
@@ -1077,7 +1091,7 @@ fun PermanentVaultScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Search saved items or private notes...") },
+                        placeholder = { Text(stringResource(R.string.saved_search_placeholder)) },
                         leadingIcon = {
                             Icon(Icons.Default.Search, contentDescription = null)
                         },
@@ -1093,7 +1107,11 @@ fun PermanentVaultScreen(
                         onClick = { sortByLatestUpdated = !sortByLatestUpdated },
                         label = {
                             Text(
-                                text = if (sortByLatestUpdated) "Most Updates" else "Latest Saved",
+                                text = if (sortByLatestUpdated) {
+                                    stringResource(R.string.saved_sort_most_updates)
+                                } else {
+                                    stringResource(R.string.saved_sort_latest_saved)
+                                },
                                 maxLines = 1
                             )
                         }
@@ -1109,12 +1127,13 @@ fun PermanentVaultScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         availableSavedStates.forEach { st ->
+                            val displaySt = if (st == ALL_STATES_KEY) allStatesLabel else st
                             FilterChip(
                                 selected = selectedStateFilter == st,
                                 onClick = { selectedStateFilter = st },
                                 label = {
                                     Text(
-                                        text = st,
+                                        text = displaySt,
                                         style = MaterialTheme.typography.labelMedium,
                                         maxLines = 1
                                     )
@@ -1151,12 +1170,12 @@ fun PermanentVaultScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "No saved items in this section",
+                            text = stringResource(R.string.saved_empty_title),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Bookmark articles from the Home feed to read them offline or follow their case timelines.",
+                            text = stringResource(R.string.saved_empty_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1228,26 +1247,26 @@ fun ArchiveNewIncidentModal(
     var selectedDistrictObj by remember(selectedStateObj) { mutableStateOf(selectedStateObj.districts.first()) }
     var selectedCityObj by remember(selectedDistrictObj) { mutableStateOf(selectedDistrictObj.cities.first()) }
 
-    var mlaInput by remember(selectedCityObj) {
+    val mlaInput by remember(selectedCityObj) {
         mutableStateOf(selectedCityObj.mlaName)
     }
-    var mpInput by remember(selectedCityObj) {
+    val mpInput by remember(selectedCityObj) {
         mutableStateOf(selectedCityObj.mpName)
     }
 
     var title by remember { mutableStateOf("") }
     var summary by remember { mutableStateOf("") }
     var fullReport by remember { mutableStateOf("") }
-    var victimCategory by remember { mutableStateOf("Teenage Student (13-19)") }
-    var crimeCategory by remember { mutableStateOf("School/Campus Safety") }
-    var caseStage by remember { mutableStateOf(CaseStage.FIR_FILED) }
+    val victimCategory by remember { mutableStateOf("Teenage Student (13-19)") }
+    val crimeCategory by remember { mutableStateOf("School/Campus Safety") }
+    val caseStage by remember { mutableStateOf(CaseStage.FIR_FILED) }
     var personalNotes by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Archive Case Dossier",
+                text = stringResource(R.string.archive_dialog_title),
                 style = MaterialTheme.typography.titleLarge
             )
         },
@@ -1257,17 +1276,17 @@ fun ArchiveNewIncidentModal(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "Privacy & Moderation Policy: Do not enter names, school roll numbers, or identifying details of minors or survivors. User-archived dossiers are saved to your personal vault and labeled 'Awaiting Verification'.",
+                    text = stringResource(R.string.archive_dialog_privacy_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 CascadingLocationDropdownField(
-                    label = "State / UT",
+                    label = stringResource(R.string.location_field_state_short),
                     selectedValue = selectedStateObj.stateName,
                     options = states.map { it.stateName },
                     enabled = true,
-                    placeholderText = "Select State",
+                    placeholderText = stringResource(R.string.location_placeholder_select_state),
                     testTagName = "modal_dropdown_state",
                     onOptionSelected = { chosenStateName ->
                         val foundState = states.find { it.stateName == chosenStateName } ?: states.first()
@@ -1278,11 +1297,11 @@ fun ArchiveNewIncidentModal(
                 )
 
                 CascadingLocationDropdownField(
-                    label = "District",
+                    label = stringResource(R.string.location_field_district),
                     selectedValue = selectedDistrictObj.districtName,
                     options = selectedStateObj.districts.map { it.districtName },
                     enabled = true,
-                    placeholderText = "Select District",
+                    placeholderText = stringResource(R.string.location_placeholder_select_district),
                     testTagName = "modal_dropdown_district",
                     onOptionSelected = { chosenDistrictName ->
                         val foundDist = selectedStateObj.districts.find { it.districtName == chosenDistrictName }
@@ -1293,11 +1312,11 @@ fun ArchiveNewIncidentModal(
                 )
 
                 CascadingLocationDropdownField(
-                    label = "City / Locality",
+                    label = stringResource(R.string.location_field_city),
                     selectedValue = selectedCityObj.cityName,
                     options = selectedDistrictObj.cities.map { it.cityName },
                     enabled = true,
-                    placeholderText = "Select City",
+                    placeholderText = stringResource(R.string.location_placeholder_select_city),
                     testTagName = "modal_dropdown_city",
                     onOptionSelected = { chosenCityName ->
                         val foundCity = selectedDistrictObj.cities.find { it.cityName == chosenCityName }
@@ -1309,7 +1328,7 @@ fun ArchiveNewIncidentModal(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Neutral Case Title (Required)") },
+                    label = { Text(stringResource(R.string.archive_field_headline)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("new_incident_title_input")
@@ -1317,7 +1336,7 @@ fun ArchiveNewIncidentModal(
                 OutlinedTextField(
                     value = summary,
                     onValueChange = { summary = it },
-                    label = { Text("Factual Summary & Source Reference (Required)") },
+                    label = { Text(stringResource(R.string.archive_field_summary)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("new_incident_summary_input"),
@@ -1326,14 +1345,14 @@ fun ArchiveNewIncidentModal(
                 OutlinedTextField(
                     value = fullReport,
                     onValueChange = { fullReport = it },
-                    label = { Text("Additional Confirmed Details (Optional)") },
+                    label = { Text(stringResource(R.string.archive_field_details)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2
                 )
                 OutlinedTextField(
                     value = personalNotes,
                     onValueChange = { personalNotes = it },
-                    label = { Text("Private Note (Visible only to you)") },
+                    label = { Text(stringResource(R.string.archive_field_private_note)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -1360,21 +1379,21 @@ fun ArchiveNewIncidentModal(
                 enabled = title.trim().length >= 5 && summary.trim().length >= 8,
                 modifier = Modifier.testTag("submit_new_incident_button")
             ) {
-                Text("Save to Archive")
+                Text(stringResource(R.string.archive_submit_btn))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
 }
 
-private enum class SafetySectionTab(val label: String) {
-    EMERGENCY_SUPPORT("Emergency Support"),
-    KNOW_YOUR_RIGHTS("Know Your Rights"),
-    SAFETY_AND_CIVIC("Safety & Representatives")
+private enum class SafetySectionTab(@StringRes val labelRes: Int) {
+    EMERGENCY_SUPPORT(R.string.safety_tab_emergency),
+    KNOW_YOUR_RIGHTS(R.string.safety_tab_rights),
+    SAFETY_AND_CIVIC(R.string.safety_tab_civic)
 }
 
 /**
@@ -1410,13 +1429,13 @@ fun DataAndSafetyScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Text(
-                    text = "Safety, Helplines & Legal Rights",
+                    text = stringResource(R.string.safety_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Verified emergency support numbers, statutory reporting guides, and public-safety resources.",
+                    text = stringResource(R.string.safety_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1435,7 +1454,7 @@ fun DataAndSafetyScreen(
                             onClick = { selectedTab = tab },
                             label = {
                                 Text(
-                                    text = tab.label,
+                                    text = stringResource(tab.labelRes),
                                     style = MaterialTheme.typography.labelLarge,
                                     maxLines = 1
                                 )
@@ -1473,7 +1492,7 @@ fun DataAndSafetyScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
-                                text = "All helplines below are official toll-free or statutory government numbers operated by MHA, MWCD, and the National Commission for Women (NCW).",
+                                text = stringResource(R.string.safety_helpline_notice),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1536,7 +1555,7 @@ fun DataAndSafetyScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Official Source: Govt. of India (${helpline.targetGroup})",
+                                    text = stringResource(R.string.safety_official_source_format, helpline.targetGroup),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1558,11 +1577,11 @@ fun DataAndSafetyScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Call,
-                                    contentDescription = "Call ${helpline.title}",
+                                    contentDescription = stringResource(R.string.cd_call_helpline, helpline.title),
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Call", maxLines = 1)
+                                Text(stringResource(R.string.safety_call_btn), maxLines = 1)
                             }
                         }
                     }
@@ -1580,13 +1599,13 @@ fun DataAndSafetyScreen(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = "Public Legal Information Notice",
+                                text = stringResource(R.string.safety_legal_notice_title),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "The summaries below provide general awareness of statutory protections under the Bharatiya Nagarik Suraksha Sanhita (BNSS), Bharatiya Nyaya Sanhita (BNS), and POCSO Act. They do not constitute personalized legal counsel. For free legal aid, contact NALSA Helpline 15100.",
+                                text = stringResource(R.string.safety_legal_notice_body),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1611,33 +1630,33 @@ fun DataAndSafetyScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Official Government Reporting Portals",
+                                text = stringResource(R.string.safety_portals_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OfficialPortalRow(
-                                title = "National Commission for Women (NCW)",
+                                title = stringResource(R.string.safety_portal_ncw_title),
                                 url = "https://ncw.nic.in/",
-                                description = "Online complaint registration & 24x7 women safety cell"
+                                description = stringResource(R.string.safety_portal_ncw_desc)
                             )
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 8.dp),
                                 color = MaterialTheme.colorScheme.outlineVariant
                             )
                             OfficialPortalRow(
-                                title = "National Cyber Crime Reporting Portal",
+                                title = stringResource(R.string.safety_portal_cyber_title),
                                 url = "https://cybercrime.gov.in/",
-                                description = "Report online harassment, morphing, blackmail, or stalking (Helpline 1930)"
+                                description = stringResource(R.string.safety_portal_cyber_desc)
                             )
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 8.dp),
                                 color = MaterialTheme.colorScheme.outlineVariant
                             )
                             OfficialPortalRow(
-                                title = "NCPCR POCSO e-Box (Child Protection)",
+                                title = stringResource(R.string.safety_portal_ncpcr_title),
                                 url = "https://ncpcr.gov.in/",
-                                description = "Confidential reporting of offences against children and school safety lapses"
+                                description = stringResource(R.string.safety_portal_ncpcr_desc)
                             )
                         }
                     }
@@ -1667,25 +1686,25 @@ fun DataAndSafetyScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "School, Campus & Online Safety Standards",
+                                    text = stringResource(R.string.safety_standards_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Spacer(modifier = Modifier.height(10.dp))
                             SafetyBulletItem(
-                                title = "School & Classroom Access Control",
-                                body = "Under NCPCR School Safety Guidelines, schools must verify all visitors at perimeter gates, prohibit unauthorized weapons or tools on campus, and maintain functional CCTV in corridors."
+                                title = stringResource(R.string.safety_bullet_1_title),
+                                body = stringResource(R.string.safety_bullet_1_body)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             SafetyBulletItem(
-                                title = "University & Workplace Internal Committees (POSH)",
-                                body = "Every higher-education institution and workplace with 10+ employees is legally required to maintain an Internal Complaints Committee (ICC) and display contact details prominently."
+                                title = stringResource(R.string.safety_bullet_2_title),
+                                body = stringResource(R.string.safety_bullet_2_body)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             SafetyBulletItem(
-                                title = "Digital & Cyber Evidence Preservation",
-                                body = "In cases of online threats or stalking, preserve screenshots with visible URLs/timestamps and report immediately via 1930 or cybercrime.gov.in before blocking accounts."
+                                title = stringResource(R.string.safety_bullet_3_title),
+                                body = stringResource(R.string.safety_bullet_3_body)
                             )
                         }
                     }
@@ -1714,12 +1733,12 @@ fun DataAndSafetyScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text(
-                                        text = "Constituency Representative Directory",
+                                        text = stringResource(R.string.safety_rep_directory_title),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "Look up verified MLA & MP records by State, District, and City",
+                                        text = stringResource(R.string.safety_rep_directory_subtitle),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1729,11 +1748,11 @@ fun DataAndSafetyScreen(
                             Spacer(modifier = Modifier.height(12.dp))
 
                             CascadingLocationDropdownField(
-                                label = "State / UT",
+                                label = stringResource(R.string.location_field_state_short),
                                 selectedValue = selectedLookupState.stateName,
                                 options = states.map { it.stateName },
                                 enabled = true,
-                                placeholderText = "Select State",
+                                placeholderText = stringResource(R.string.location_placeholder_select_state),
                                 testTagName = "safety_lookup_state",
                                 onOptionSelected = { stName ->
                                     val found = states.find { it.stateName == stName } ?: states.first()
@@ -1750,11 +1769,11 @@ fun DataAndSafetyScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 CascadingLocationDropdownField(
-                                    label = "District",
+                                    label = stringResource(R.string.location_field_district),
                                     selectedValue = selectedLookupDistrict.districtName,
                                     options = selectedLookupState.districts.map { it.districtName },
                                     enabled = true,
-                                    placeholderText = "Select District",
+                                    placeholderText = stringResource(R.string.location_placeholder_select_district),
                                     testTagName = "safety_lookup_district",
                                     onOptionSelected = { distName ->
                                         val found = selectedLookupState.districts.find { it.districtName == distName }
@@ -1766,11 +1785,11 @@ fun DataAndSafetyScreen(
                                 )
 
                                 CascadingLocationDropdownField(
-                                    label = "City / Constituency",
+                                    label = stringResource(R.string.location_field_city_constituency),
                                     selectedValue = selectedLookupCity.cityName,
                                     options = selectedLookupDistrict.cities.map { it.cityName },
                                     enabled = true,
-                                    placeholderText = "Select City",
+                                    placeholderText = stringResource(R.string.location_placeholder_select_city),
                                     testTagName = "safety_lookup_city",
                                     onOptionSelected = { cityName ->
                                         val found = selectedLookupDistrict.cities.find { it.cityName == cityName }
@@ -1798,7 +1817,10 @@ fun DataAndSafetyScreen(
                                     .heightIn(min = 48.dp),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text("View Reports in ${selectedLookupState.stateName}", maxLines = 1)
+                                Text(
+                                    text = stringResource(R.string.safety_view_reports_in_state, selectedLookupState.stateName),
+                                    maxLines = 1
+                                )
                             }
                         }
                     }
@@ -1842,7 +1864,11 @@ private fun ExpandableLegalGuideCard(guide: LegalRightGuide) {
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse guide" else "Expand guide",
+                    contentDescription = if (expanded) {
+                        stringResource(R.string.cd_collapse_guide)
+                    } else {
+                        stringResource(R.string.cd_expand_guide)
+                    },
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1886,7 +1912,7 @@ private fun ExpandableLegalGuideCard(guide: LegalRightGuide) {
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Statutory Reference: ${guide.statutoryCitation}",
+                        text = stringResource(R.string.safety_statutory_ref_format, guide.statutoryCitation),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -1929,7 +1955,7 @@ private fun OfficialPortalRow(
         }
         Icon(
             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-            contentDescription = "Open $title",
+            contentDescription = stringResource(R.string.cd_open_portal, title),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp)
         )
@@ -2018,4 +2044,3 @@ fun EditorialLoadingSkeletonCard() {
         }
     }
 }
-

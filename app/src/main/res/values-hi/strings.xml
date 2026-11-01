@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">सुरक्षा क्रॉनिकल</string>
+    <string name="app_tagline">सुर्खियों से आगे। तथ्यों की पड़ताल।</string>
+
+    <!-- Bottom Navigation Tabs (Requested exact Hindi labels) -->
+    <string name="nav_home">होम</string>
+    <string name="nav_track">ट्रैक</string>
+    <string name="nav_saved">सहेजे गए</string>
+    <string name="nav_safety">सुरक्षा</string>
+    <string name="nav_mps">सांसद</string>
+
+    <!-- Top App Bar & Content Descriptions -->
+    <string name="cd_search_toggle">मुख्य शब्द से समाचार खोजें</string>
+    <string name="cd_search_articles">लेख खोजें</string>
+    <string name="cd_close_search">खोज बंद करें</string>
+    <string name="cd_clear_search">खोज साफ़ करें</string>
+    <string name="cd_notifications">केस अपडेट सूचनाएं</string>
+    <string name="cd_sensitive_blur">संवेदनशील सामग्री ब्लर टॉगल करें</string>
+    <string name="cd_editorial_standards">संपादकीय और गोपनीयता मानक</string>
+    <string name="cd_settings">ऐप सेटिंग्स और प्राथमिकताएं</string>
+    <string name="cd_sign_out">साइन आउट करें</string>
+    <string name="cd_sign_in">साइन इन करें</string>
+    <string name="cd_archive_new_case">नया सत्यापित मामला दर्ज करें</string>
+    <string name="cd_refresh_live_rss">समाचार फ़ीड रिफ्रेश करें</string>
+    <string name="cd_save_for_offline">लेख सहेजें</string>
+    <string name="cd_remove_saved">सहेजे गए लेखों से हटाएं</string>
+    <string name="cd_follow_case">केस अपडेट फ़ॉलो करें</string>
+    <string name="cd_unfollow_case">केस अपडेट फ़ॉलो किए जा रहे हैं</string>
+    <string name="cd_close_dossier">वापस जाएं</string>
+    <string name="cd_decrease_font">अक्षर का आकार छोटा करें</string>
+    <string name="cd_increase_font">अक्षर का आकार बड़ा करें</string>
+    <string name="cd_share_report">सत्यापित रिपोर्ट साझा करें</string>
+    <string name="cd_open_source">प्रकाशक लिंक खोलें</string>
+    <string name="cd_call_helpline">%1$s पर कॉल करें</string>
+    <string name="cd_select_location">स्थान फ़िल्टर चुनें</string>
+    <string name="cd_clear_jurisdiction">स्थान फ़िल्टर रीसेट करें</string>
+    <string name="cd_search_locations">स्थान खोजें</string>
+    <string name="cd_constituency_info">निर्वाचन क्षेत्र की जानकारी</string>
+    <string name="cd_collapse_details">विवरण संक्षिप्त करें</string>
+    <string name="cd_expand_details">विवरण विस्तार से देखें</string>
+    <string name="cd_content_advisory">सामग्री चेतावनी</string>
+    <string name="cd_show_report">रिपोर्ट दिखाएं</string>
+    <string name="cd_case_update_available">केस अपडेट उपलब्ध है</string>
+    <string name="cd_case_location">घटना का स्थान</string>
+    <string name="cd_collapse_timeline">टाइमलाइन संक्षिप्त करें</string>
+    <string name="cd_expand_timeline">टाइमलाइन विस्तार से देखें</string>
+    <string name="cd_collapse_representatives">जनप्रतिनिधि विवरण छुपाएं</string>
+    <string name="cd_expand_representatives">जनप्रतिनिधि विवरण दिखाएं</string>
+    <string name="cd_export_saved">सहेजा गया संग्रह निर्यात करें</string>
+    <string name="cd_collapse_guide">मार्गदर्शिका संक्षिप्त करें</string>
+    <string name="cd_expand_guide">मार्गदर्शिका विस्तार से देखें</string>
+    <string name="cd_open_portal">%1$s खोलें</string>
+    <string name="cd_editorial_shield">संपादकीय सुरक्षा कवच</string>
+    <string name="cd_sign_in_google">Google से साइन इन करें</string>
+    <string name="cd_search_mps">सांसद खोजें</string>
+    <string name="cd_filter_state_ut">राज्य या केंद्रशासित प्रदेश से फ़िल्टर करें</string>
+    <string name="cd_selected">चयनित</string>
+    <string name="cd_back_mps_list">सांसद सूची पर वापस जाएं</string>
+
+    <!-- Search Bar -->
+    <string name="search_placeholder_top">शीर्षक, स्थान, न्यायालय या स्रोत से खोजें…</string>
+    <string name="search_placeholder_inline">शीर्षक, स्थान, न्यायालय या स्रोत से खोजें…</string>
+
+    <!-- First-Run Language Onboarding -->
+    <string name="onboarding_lang_badge">बहुभाषी जनहित पत्रकारिता</string>
+    <string name="onboarding_lang_title">अपनी पठन भाषा चुनें</string>
+    <string name="onboarding_lang_subtitle">Choose your language • सभी मेनू, सत्यापित केस डॉसियर, टाइमलाइन, हेल्पलाइन और समाचार तुरंत आपकी भाषा में बदल जाएंगे।</string>
+    <string name="onboarding_tier_a_header">मूल भाषा समाचार और पूर्ण अनुवाद</string>
+    <string name="onboarding_tier_b_header">अनूदित समाचार फ़ीड और पूर्ण इंटरफ़ेस</string>
+    <string name="onboarding_continue_btn">%1$s में आगे बढ़ें</string>
+
+    <!-- Settings, Notifications & Display Preferences Dialogs -->
+    <string name="notifications_dialog_title">केस अपडेट अलर्ट</string>
+    <string name="notifications_followed_title">फ़ॉलो किए गए मामलों की सूचनाएं</string>
+    <string name="notifications_followed_subtitle">चार्जशीट, अदालती सुनवाई या सत्यापित अपडेट दर्ज होने पर सूचित करें।</string>
+    <string name="notifications_empty_text">आप अभी किसी मामले को फ़ॉलो नहीं कर रहे हैं। पुष्ट प्रगति ट्रैक करने के लिए किसी भी रिपोर्ट पर \'फ़ॉलो करें\' टैप करें।</string>
+    <string name="notifications_following_count">वर्तमान में %1$d मामले फ़ॉलो किए जा रहे हैं:</string>
+    <string name="settings_title">पठन और प्रदर्शन प्राथमिकताएं</string>
+    <string name="settings_theme_label">दिखावट (थीम)</string>
+    <string name="settings_font_scale_label">अक्षर का आकार</string>
+    <string name="settings_font_scale_small">0.85x छोटा</string>
+    <string name="settings_font_scale_standard">1.0x मानक</string>
+    <string name="settings_font_scale_large">1.3x बड़ा</string>
+    <string name="settings_font_scale_max">1.6x अधिकतम</string>
+    <string name="settings_language_label">ऐप की भाषा (Language)</string>
+    <string name="settings_language_hint">बिना रीस्टार्ट किए तुरंत संपूर्ण ऐप, केस डॉसियर, टाइमलाइन और लाइव समाचार फ़ीड की भाषा बदलता है।</string>
+    <string name="settings_sensitive_blur_title">संवेदनशील शीर्षक ब्लर</string>
+    <string name="settings_sensitive_blur_subtitle">संवेदनशील घटनाओं के सारांश पढ़ने से पहले टैप आवश्यक करें</string>
+    <string name="settings_sign_out_btn">अभिलेखागार से साइन आउट करें</string>
+    <string name="settings_sign_in_btn">Google से साइन इन करें</string>
+    <string name="action_done">संपन्न</string>
+    <string name="action_close">बंद करें</string>
+    <string name="action_cancel">रद्द करें</string>
+    <string name="action_reset">रीसेट</string>
+    <string name="action_retry">पुनः प्रयास करें</string>
+    <string name="action_refresh">रिफ्रेश</string>
+    <string name="action_reset_filters">सभी फ़िल्टर रीसेट करें</string>
+    <string name="action_apply_filters">फ़िल्टर लागू करें</string>
+    <string name="action_reset_location_filters">फ़िल्टर हटाएं</string>
+
+    <!-- Theme Modes -->
+    <string name="theme_system">सिस्टम</string>
+    <string name="theme_light">लाइट</string>
+    <string name="theme_dark">डार्क</string>
+
+    <!-- Case Stages -->
+    <string name="stage_reported">घटना दर्ज / रिपोर्ट</string>
+    <string name="stage_fir_filed">प्राथमिकी (FIR) दर्ज</string>
+    <string name="stage_under_investigation">जांच जारी</string>
+    <string name="stage_arrest_made">गिरफ़्तारी / हिरासत</string>
+    <string name="stage_chargesheet_filed">आरोपपत्र (चार्जशीट) दाखिल</string>
+    <string name="stage_court_hearing">न्यायालय सुनवाई / ट्रायल</string>
+    <string name="stage_verdict">फ़ैसला / निर्णय</string>
+    <string name="stage_appeal_pending">अपील / उच्च न्यायालय</string>
+
+    <!-- Verification Status -->
+    <string name="verification_police_fir">सत्यापित पुलिस बुलेटिन / FIR</string>
+    <string name="verification_court_order">आधिकारिक न्यायालय आदेश</string>
+    <string name="verification_multi_source">बहु-स्रोत सत्यापित रिपोर्ट</string>
+    <string name="verification_single_report">प्रारंभिक विश्वसनीय रिपोर्ट</string>
+    <string name="verification_developing">प्रगतिशील — सत्यापन जारी</string>
+    <string name="verification_pill_confirmed">सत्यापित</string>
+    <string name="verification_pill_reported">रिपोर्ट किया गया</string>
+    <string name="verification_pill_unverified">असत्यापित</string>
+    <string name="verification_pill_corrected">संशोधित</string>
+    <string name="verification_semantics_prefix">सत्यापन स्थिति: %1$s</string>
+
+    <!-- Sensitivity Level -->
+    <string name="sensitivity_standard">मानक सार्वजनिक रिकॉर्ड</string>
+    <string name="sensitivity_minor_protected">POCSO / नाबालिग की पहचान गोपनीय</string>
+    <string name="sensitivity_identity_withheld">BNS धारा 72 / पीड़िता की पहचान सुरक्षित</string>
+
+    <!-- Auth & Guest Mode -->
+    <string name="auth_investigative_desk">जनहित पत्रकारिता और केस अभिलेखागार</string>
+    <string name="auth_platform_description">महिलाओं, बालिकाओं और किशोरों को प्रभावित करने वाले सुरक्षा मुद्दों, पुलिस जांच और अदालती कार्यवाहियों पर केंद्रित भारत का खोजी पत्रकारिता और केस-ट्रैकिंग मंच।</string>
+    <string name="auth_privacy_notice">पीड़िता की गरिमा और कानूनी गोपनीयता सर्वोपरि: भारतीय न्याय संहिता (BNS) की धारा 72 और POCSO अधिनियम के सख्त अनुपालन में, सभी केस डॉसियर में पीड़िता की पहचान पूरी तरह गोपनीय रखी जाती है।</string>
+    <string name="auth_feature_news_title">सत्यापित समाचार और क्षेत्रीय फ़िल्टर</string>
+    <string name="auth_feature_news_desc">पूरे भारत की तथ्यात्मक रिपोर्ट पढ़ें या राज्य, जिला और शहर के अनुसार फ़िल्टर करें।</string>
+    <string name="auth_feature_timelines_title">दीर्घकालिक केस ट्रैकर</string>
+    <string name="auth_feature_timelines_desc">प्रारंभिक समाचार चक्र के बाद भी FIR, चार्जशीट, अदालती सुनवाई और न्यायिक फ़ैसलों को ट्रैक करें।</string>
+    <string name="auth_feature_helplines_title">व्यक्तिगत संग्रह और आपातकालीन सहायता</string>
+    <string name="auth_feature_helplines_desc">निजी नोट्स के साथ ऑफ़लाइन पढ़ने के लिए मामले सहेजें और 24/7 राष्ट्रीय हेल्पलाइन व कानूनी मार्गदर्शिकाएं देखें।</string>
+    <string name="auth_connecting_google">साइन इन हो रहा है…</string>
+    <string name="auth_sign_in_google">Google के साथ जारी रखें</string>
+    <string name="auth_continue_guest">अतिथि (Guest) के रूप में पढ़ें (समाचार, सांसद व हेल्पलाइन)</string>
+    <string name="auth_sync_note">आपके सहेजे गए मामले और फ़ॉलो की गई टाइमलाइन सुरक्षित रूप से सिंक की जाती हैं।</string>
+    <string name="auth_failed_prefix">प्रमाणीकरण विफल: %1$s</string>
+    <string name="guest_sign_in_required_title">मामले सहेजने और ट्रैक करने के लिए साइन इन करें</string>
+    <string name="guest_sign_in_required_body">समाचार, केस टाइमलाइन, सांसद सूची और आपातकालीन हेल्पलाइन बिना साइन इन के उपलब्ध हैं। मामलों को बुकमार्क करने, फ़ॉलो करने या नया अपडेट दर्ज करने के लिए कृपया Google से साइन इन करें।</string>
+    <string name="guest_banner_text">अतिथि मोड • मामले सहेजने और टाइमलाइन सिंक करने के लिए साइन इन करें</string>
+    <string name="guest_sign_in_action">साइन इन</string>
+
+    <!-- Home / Front Page Categories & Feed -->
+    <string name="home_cat_latest">नवीनतम</string>
+    <string name="home_cat_following">फ़ॉलो किए गए</string>
+    <string name="home_cat_case_updates">केस अपडेट</string>
+    <string name="home_cat_states">राज्य</string>
+    <string name="home_cat_safety">सुरक्षा</string>
+    <string name="home_cat_legal_updates">कानूनी अपडेट</string>
+    <string name="home_empty_title">इस फ़िल्टर से मेल खाने वाली कोई सत्यापित रिपोर्ट नहीं मिली</string>
+    <string name="home_empty_subtitle">सभी राष्ट्रीय सत्यापित रिपोर्ट देखने के लिए स्थान या श्रेणी फ़िल्टर रीसेट करें।</string>
+    <string name="home_load_more_format">और रिपोर्ट लोड करें (%1$d शेष)</string>
+
+    <!-- Machine Translation Indicators -->
+    <string name="translation_badge_auto">स्वचालित रूप से अनूदित</string>
+    <string name="translation_view_original">मूल देखें</string>
+    <string name="translation_view_translated">अनुवाद देखें</string>
+    <string name="translation_in_progress">%1$s में अनुवाद हो रहा है…</string>
+
+    <!-- Location Selector & Bottom Sheet -->
+    <string name="jurisdiction_all_india">अखिल भारतीय</string>
+    <string name="jurisdiction_all_districts">सभी जिले</string>
+    <string name="jurisdiction_all_cities">सभी शहर</string>
+    <string name="jurisdiction_all_states">सभी राज्य</string>
+    <string name="jurisdiction_all_categories">सभी श्रेणियां</string>
+    <string name="location_sheet_title">स्थान के अनुसार फ़िल्टर करें</string>
+    <string name="location_sheet_subtitle">रिपोर्ट फ़िल्टर करने के लिए राज्य/केंद्रशासित प्रदेश, जिला और शहर चुनें</string>
+    <string name="location_sheet_search_placeholder">राज्य, जिला या शहर खोजें…</string>
+    <string name="location_field_state_ut">राज्य / केंद्रशासित प्रदेश</string>
+    <string name="location_field_state_short">राज्य / केंद्रशासित प्रदेश</string>
+    <string name="location_field_district">जिला</string>
+    <string name="location_field_city">शहर / क्षेत्र</string>
+    <string name="location_field_city_constituency">शहर / निर्वाचन क्षेत्र</string>
+    <string name="location_placeholder_select_state_first">पहले राज्य/केंद्रशासित प्रदेश चुनें</string>
+    <string name="location_placeholder_select_district_first">पहले जिला चुनें</string>
+    <string name="location_placeholder_select_state">राज्य चुनें</string>
+    <string name="location_placeholder_select_district">जिला चुनें</string>
+    <string name="location_placeholder_select_city">शहर चुनें</string>
+    <string name="location_quick_select_state">त्वरित राज्य चयन</string>
+
+    <!-- Constituency Representative Card -->
+    <string name="rep_card_title_format">निर्वाचन क्षेत्र जनप्रतिनिधि • %1$s</string>
+    <string name="rep_card_mla_mp_compact">विधायक (MLA): %1$s (%2$s) • सांसद (MP): %3$s (%4$s)</string>
+    <string name="rep_card_assembly_format">विधानसभा (MLA): %1$s — %2$s (%3$s)</string>
+    <string name="rep_card_loksabha_format">लोकसभा (MP): %1$s — %2$s (%3$s)</string>
+    <string name="rep_card_police_format">पुलिस क्षेत्राधिकार: %1$s (%2$s, %3$s)</string>
+    <string name="rep_card_source_disclaimer">स्रोत: भारत निर्वाचन आयोग (ECI) आधिकारिक सूची • अंतिम सत्यापन अक्टूबर 2026। यह केवल नागरिक संदर्भ के लिए है; इसका अर्थ व्यक्तिगत अपराधों के लिए व्यक्तिगत दायित्व नहीं है।</string>
+
+    <!-- Editorial News Card & Case Dossier Card -->
+    <string name="card_featured_badge">प्रमुख डॉसियर</string>
+    <string name="card_show_report">रिपोर्ट दिखाएं</string>
+    <string name="card_show_case_summary">केस सारांश दिखाएं</string>
+    <string name="card_latest_update_format">नवीनतम अपडेट (%1$s) • %2$s</string>
+    <string name="card_original_report_format">मूल रिपोर्ट: %1$s (%2$d दिनों से ट्रैक) • अंतिम सत्यापन: %3$s</string>
+    <string name="card_action_following">फ़ॉलो किया गया</string>
+    <string name="card_action_follow_case">केस फ़ॉलो करें</string>
+    <string name="card_action_saved">सहेजा गया</string>
+    <string name="card_action_save">सहेजें</string>
+    <string name="card_action_open_timeline">टाइमलाइन खोलें</string>
+    <string name="card_timeline_milestones_format">केस टाइमलाइन (%1$d पड़ाव)</string>
+    <string name="card_action_hide">छुपाएं</string>
+    <string name="card_action_view">देखें</string>
+    <string name="card_submit_timeline_update">टाइमलाइन अपडेट जोड़ें</string>
+    <string name="card_timeline_source_format">स्रोत: %1$s • %2$s</string>
+    <string name="card_confirmed_status_format">पुष्ट स्थिति: %1$s</string>
+    <string name="card_milestones_count_format">%1$d पड़ाव</string>
+
+    <!-- Case Tracker Screen -->
+    <string name="tracker_title">भूले नहीं जाएंगे • केस ट्रैकर</string>
+    <string name="tracker_subtitle">प्रारंभिक समाचार चक्र के बाद भी पुलिस जांच, चार्जशीट और अदालती कार्यवाहियों पर नज़र रखें।</string>
+    <string name="tracker_count_format">%1$d ट्रैक किए गए मामले</string>
+    <string name="tracker_tab_all">सभी मामले</string>
+    <string name="tracker_tab_following">फ़ॉलो किए गए</string>
+    <string name="tracker_tab_recent">हाल ही में अपडेटेड</string>
+    <string name="tracker_tab_awaiting">अपडेट की प्रतीक्षा में</string>
+    <string name="tracker_tab_resolved">फ़ैसला / निस्तारित</string>
+    <string name="tracker_empty_title">इस दृश्य में कोई मामला नहीं है</string>
+    <string name="tracker_empty_subtitle">\'सभी मामले\' पर वापस जाएं या होम फ़ीड से मामलों को फ़ॉलो करें।</string>
+    <string name="tracker_show_all_btn">सभी ट्रैक किए गए मामले दिखाएं</string>
+
+    <!-- Saved & Followed Screen -->
+    <string name="saved_title">सहेजे गए और फ़ॉलो किए गए मामले</string>
+    <string name="saved_subtitle">ऑफ़लाइन पढ़ने के लिए डिवाइस पर सुरक्षित और ऑनलाइन होने पर आपके खाते के साथ सिंक।</string>
+    <string name="saved_export_btn">निर्यात करें</string>
+    <string name="saved_export_chooser_title">सहेजा गया संग्रह निर्यात करें</string>
+    <string name="saved_add_case_btn">मामला जोड़ें</string>
+    <string name="saved_tab_articles">सहेजे गए लेख</string>
+    <string name="saved_tab_followed">फ़ॉलो किए गए मामले</string>
+    <string name="saved_tab_submitted">दर्ज किए गए डॉसियर</string>
+    <string name="saved_search_placeholder">सहेजे गए लेख या निजी नोट्स खोजें…</string>
+    <string name="saved_sort_most_updates">सर्वाधिक अपडेट</string>
+    <string name="saved_sort_latest_saved">नवीनतम सहेजे गए</string>
+    <string name="saved_empty_title">इस अनुभाग में कोई सहेजा गया आइटम नहीं है</string>
+    <string name="saved_empty_subtitle">ऑफ़लाइन पढ़ने या केस टाइमलाइन फ़ॉलो करने के लिए होम फ़ीड से लेख बुकमार्क करें।</string>
+
+    <!-- Archive New Case Modal -->
+    <string name="archive_dialog_title">केस डॉसियर सहेजें</string>
+    <string name="archive_dialog_privacy_note">गोपनीयता और मॉडरेशन नीति: नाबालिगों या पीड़िताओं के नाम, स्कूल रोल नंबर या पहचान उजागर करने वाला विवरण दर्ज न करें। उपयोगकर्ता द्वारा दर्ज डॉसियर आपके निजी वॉल्ट में सहेजे जाते हैं और \'सत्यापन लंबित\' चिह्नित होते हैं।</string>
+    <string name="archive_field_headline">तटस्थ केस शीर्षक (आवश्यक)</string>
+    <string name="archive_field_summary">तथ्यात्मक सारांश और स्रोत संदर्भ (आवश्यक)</string>
+    <string name="archive_field_details">अतिरिक्त पुष्ट विवरण (वैकल्पिक)</string>
+    <string name="archive_field_private_note">निजी नोट (केवल आपको दिखाई देगा)</string>
+    <string name="archive_submit_btn">अभिलेखागार में सहेजें</string>
+
+    <!-- Safety, Helplines & Legal Rights Screen -->
+    <string name="safety_title">सुरक्षा, हेल्पलाइन और कानूनी अधिकार</string>
+    <string name="safety_subtitle">सत्यापित आपातकालीन सहायता नंबर, वैधानिक रिपोर्टिंग मार्गदर्शिकाएं और जन-सुरक्षा संसाधन।</string>
+    <string name="safety_tab_emergency">आपातकालीन सहायता</string>
+    <string name="safety_tab_rights">अपने अधिकार जानें</string>
+    <string name="safety_tab_civic">सुरक्षा और जनप्रतिनिधि</string>
+    <string name="safety_helpline_notice">नीचे दी गई सभी हेल्पलाइन गृह मंत्रालय (MHA), महिला एवं बाल विकास मंत्रालय (MWCD) और राष्ट्रीय महिला आयोग (NCW) द्वारा संचालित आधिकारिक टोल-फ्री सरकारी नंबर हैं।</string>
+    <string name="safety_official_source_format">आधिकारिक स्रोत: भारत सरकार (%1$s)</string>
+    <string name="safety_call_btn">कॉल करें</string>
+    <string name="safety_legal_notice_title">सार्वजनिक कानूनी जानकारी सूचना</string>
+    <string name="safety_legal_notice_body">नीचे दिए गए सारांश भारतीय नागरिक सुरक्षा संहिता (BNSS), भारतीय न्याय संहिता (BNS) और POCSO अधिनियम के तहत वैधानिक संरक्षणों की सामान्य जानकारी देते हैं। निःशुल्क कानूनी सहायता के लिए नालसा (NALSA) हेल्पलाइन 15100 पर संपर्क करें।</string>
+    <string name="safety_statutory_ref_format">वैधानिक संदर्भ: %1$s</string>
+    <string name="safety_portals_title">आधिकारिक सरकारी रिपोर्टिंग पोर्टल</string>
+    <string name="safety_portal_ncw_title">राष्ट्रीय महिला आयोग (NCW)</string>
+    <string name="safety_portal_ncw_desc">ऑनलाइन शिकायत पंजीकरण और 24x7 महिला सुरक्षा प्रकोष्ठ</string>
+    <string name="safety_portal_cyber_title">राष्ट्रीय साइबर अपराध रिपोर्टिंग पोर्टल</string>
+    <string name="safety_portal_cyber_desc">ऑनलाइन उत्पीड़न, मॉर्फिंग, ब्लैकमेल या स्टॉकिंग की रिपोर्ट करें (हेल्पलाइन 1930)</string>
+    <string name="safety_portal_ncpcr_title">NCPCR POCSO ई-बॉक्स (बाल संरक्षण)</string>
+    <string name="safety_portal_ncpcr_desc">बच्चों के विरुद्ध अपराधों और स्कूल सुरक्षा चूक की गोपनीय रिपोर्टिंग</string>
+    <string name="safety_standards_title">स्कूल, परिसर और ऑनलाइन सुरक्षा मानक</string>
+    <string name="safety_bullet_1_title">स्कूल और कक्षा प्रवेश नियंत्रण</string>
+    <string name="safety_bullet_1_body">NCPCR स्कूल सुरक्षा दिशानिर्देशों के तहत, स्कूलों को मुख्य द्वार पर सभी आगंतुकों का सत्यापन करना, परिसर में अनधिकृत हथियारों या उपकरणों पर प्रतिबंध लगाना और गलियारों में कार्यशील CCTV रखना अनिवार्य है।</string>
+    <string name="safety_bullet_2_title">विश्वविद्यालय और कार्यस्थल आंतरिक समिति (POSH)</string>
+    <string name="safety_bullet_2_body">10+ कर्मचारियों वाले प्रत्येक उच्च शिक्षण संस्थान और कार्यस्थल के लिए आंतरिक शिकायत समिति (ICC) बनाना और संपर्क विवरण प्रमुखता से प्रदर्शित करना कानूनी रूप से अनिवार्य है।</string>
+    <string name="safety_bullet_3_title">डिजिटल और साइबर साक्ष्य संरक्षण</string>
+    <string name="safety_bullet_3_body">ऑनलाइन धमकी या स्टॉकिंग के मामलों में, खातों को ब्लॉक करने से पहले दृश्यमान URL और समय के साथ स्क्रीनशॉट सुरक्षित रखें और तुरंत 1930 या cybercrime.gov.in पर रिपोर्ट करें।</string>
+    <string name="safety_rep_directory_title">निर्वाचन क्षेत्र जनप्रतिनिधि निर्देशिका</string>
+    <string name="safety_rep_directory_subtitle">राज्य, जिला और शहर के अनुसार सत्यापित विधायक (MLA) और सांसद (MP) विवरण देखें</string>
+    <string name="safety_view_reports_in_state">%1$s की रिपोर्ट देखें</string>
+
+    <!-- Case Dossier Detail Screen -->
+    <string name="dossier_share_chooser_title">सत्यापित रिपोर्ट साझा करें</string>
+    <string name="dossier_source_prefix">स्रोत: %1$s</string>
+    <string name="dossier_published_verified_format">प्रकाशित: %1$s • अंतिम सत्यापन: %2$s</string>
+    <string name="dossier_original_source_btn">मूल स्रोत</string>
+    <string name="dossier_btn_following_case">केस फ़ॉलो किया जा रहा है</string>
+    <string name="dossier_btn_follow_case">केस फ़ॉलो करें</string>
+    <string name="dossier_btn_saved_archive">संग्रह में सहेजा गया</string>
+    <string name="dossier_btn_save_article">लेख सहेजें</string>
+    <string name="dossier_edit_private_note">निजी नोट संपादित करें</string>
+    <string name="dossier_add_private_note">निजी नोट जोड़ें</string>
+    <string name="dossier_offline_cache_hint">सहेजे गए लेख ऑफ़लाइन पढ़ने के लिए सुरक्षित रहते हैं</string>
+    <string name="dossier_private_note_label">निजी नोट (आपके व्यक्तिगत संग्रह में सुरक्षित)</string>
+    <string name="dossier_key_summary_header">प्रमुख तथ्यात्मक सारांश</string>
+    <string name="dossier_background_header">पुष्ट केस पृष्ठभूमि और रिपोर्टिंग</string>
+    <string name="dossier_legal_privacy_note">संपादकीय और कानूनी सूचना: POCSO धारा 23 और BNS धारा 72 के अनुपालन में, पीड़िताओं और नाबालिगों की पहचान पूरी तरह गोपनीय रखी गई है। भारतीय कानून के तहत, FIR, रिमांड या चार्जशीट एक प्रक्रियात्मक चरण है और न्यायालय द्वारा दोषसिद्धि से पहले अपराध साबित नहीं करता है।</string>
+    <string name="dossier_timeline_title">केस टाइमलाइन</string>
+    <string name="dossier_timeline_subtitle_format">कालानुक्रमिक रिकॉर्ड • अंतिम सत्यापन %1$s</string>
+    <string name="dossier_log_update_btn">अपडेट जोड़ें</string>
+    <string name="dossier_sort_chronological">कालानुक्रमिक (सबसे पुराना पहले)</string>
+    <string name="dossier_sort_latest">नवीनतम पहले</string>
+    <string name="dossier_timeline_meta_format">चरण: %1$s • स्रोत: %2$s • %3$s</string>
+    <string name="dossier_reference_btn">संदर्भ</string>
+    <string name="dossier_jurisdiction_title">क्षेत्राधिकार और निर्वाचित जनप्रतिनिधि</string>
+    <string name="dossier_mla_mp_line_format">विधायक (MLA): %1$s (%2$s)  •  सांसद (MP): %3$s (%4$s)</string>
+    <string name="dossier_mla_detail_format">विधानसभा सदस्य (MLA): %1$s</string>
+    <string name="dossier_constituency_party_format">निर्वाचन क्षेत्र: %1$s • दल: %2$s</string>
+    <string name="dossier_mp_detail_format">लोकसभा सांसद (MP): %1$s</string>
+    <string name="dossier_police_jurisdiction_format">पुलिस क्षेत्राधिकार: %1$s</string>
+    <string name="dossier_rep_disclaimer_format">डेटा स्रोत: %1$s • अंतिम सत्यापन: %2$s। जनप्रतिनिधियों का विवरण नागरिक पारदर्शिता के लिए है; इसका अर्थ व्यक्तिगत आपराधिक कृत्यों के लिए व्यक्तिगत जिम्मेदारी नहीं है।</string>
+    <string name="dossier_relevant_laws_title">संबंधित कानूनी प्रावधान</string>
+    <string name="dossier_related_reporting_title">संबंधित रिपोर्टिंग और जुड़े मामले</string>
+    <string name="dossier_corrections_title">सत्यापन और संशोधन इतिहास</string>
+    <string name="dossier_corrections_status_format">अंतिम सत्यापन: %1$s • स्थिति: %2$s</string>
+    <string name="dossier_report_issue_btn">त्रुटि रिपोर्ट करें</string>
+    <string name="dossier_audit_bullet_1_format">• संपादकीय ऑडिट: प्राथमिक स्रोत (%1$s) और POCSO/BNS पहचान गोपनीयता सत्यापित (%2$s)।</string>
+    <string name="dossier_audit_bullet_2">• प्रकाशक लाइसेंस: जनहित ट्रैकिंग के लिए तथ्यात्मक सारांश प्रकाशित; पूर्ण कॉपीराइट मूल प्रकाशक के पास सुरक्षित है।</string>
+    <string name="dossier_audit_no_corrections">• संशोधन लॉग: अब तक कोई औपचारिक संशोधन या खंडन जारी नहीं किया गया है।</string>
+    <string name="dossier_followup_dialog_title">केस टाइमलाइन अपडेट दर्ज करें</string>
+    <string name="dossier_followup_dialog_note">उपयोगकर्ता द्वारा दर्ज अपडेट आपके संग्रह में सहेजे जाते हैं और आधिकारिक पुलिस या अदालती रिकॉर्ड से पुष्टि होने तक \'प्रस्तुत • सत्यापन लंबित\' चिह्नित रहते हैं। नाबालिगों की पहचान संबंधी जानकारी कभी शामिल न करें।</string>
+    <string name="dossier_followup_presets_label">त्वरित पड़ाव विकल्प:</string>
+    <string name="dossier_followup_date_label">तिथि या पड़ाव का नाम</string>
+    <string name="dossier_followup_stage_label">पुष्ट प्रक्रियात्मक चरण:</string>
+    <string name="dossier_followup_headline_label">तथ्यात्मक अपडेट शीर्षक (आवश्यक)</string>
+    <string name="dossier_followup_details_label">विवरण और आधिकारिक स्रोत / आदेश संदर्भ (आवश्यक)</string>
+    <string name="dossier_followup_submit_btn">टाइमलाइन अपडेट सहेजें</string>
+    <string name="dossier_followup_day_update_format">दिन %1$d अपडेट</string>
+    <string name="dossier_preset_30">1 माह फॉलो-अप • दिन 30</string>
+    <string name="dossier_preset_60">2 माह फॉलो-अप • दिन 60</string>
+    <string name="dossier_preset_90">3 माह फॉलो-अप • दिन 90</string>
+    <string name="dossier_preset_180">6 माह फॉलो-अप • दिन 180</string>
+    <string name="dossier_preset_court">अदालत / जांच अपडेट</string>
+    <string name="dossier_correction_dialog_title">संशोधन या गोपनीयता चिंता रिपोर्ट करें</string>
+    <string name="dossier_correction_dialog_prefix">त्रुटि या गोपनीयता संशोधन का अनुरोध करें: %1$s</string>
+    <string name="dossier_correction_field_label">संशोधन का विवरण या आधिकारिक स्रोत URL लिखें</string>
+    <string name="dossier_correction_submit_btn">रिपोर्ट सबमिट करें</string>
+    <string name="dossier_issue_factual">तथ्यात्मक संशोधन</string>
+    <string name="dossier_issue_privacy">गोपनीयता / नाबालिग पहचान सुरक्षा</string>
+    <string name="dossier_issue_court">नवीनतम अदालत / पुलिस आदेश</string>
+    <string name="dossier_issue_rep">जनप्रतिनिधि मैपिंग संशोधन</string>
+
+    <!-- MPs of India Feature -->
+    <string name="mps_loading_text">संसद सदस्यों (सांसदों) की निर्देशिका लोड हो रही है…</string>
+    <string name="mps_error_title">सांसद डेटा लोड करने में असमर्थ</string>
+    <string name="mps_title">भारत के सांसद (MPs)</string>
+    <string name="mps_data_as_of">डेटा तिथि: %1$s</string>
+    <string name="mps_house_lok_sabha">लोकसभा</string>
+    <string name="mps_house_rajya_sabha">राज्यसभा</string>
+    <string name="mps_sitting_vacant_format">%1$d आसीन · %2$d रिक्त</string>
+    <string name="mps_search_placeholder_lok">सांसद, निर्वाचन क्षेत्र, राज्य या दल खोजें…</string>
+    <string name="mps_search_placeholder_rajya">सांसद, राज्य या दल खोजें…</string>
+    <string name="mps_showing_lok_format">%2$d लोकसभा सीटों में से %1$d प्रदर्शित</string>
+    <string name="mps_showing_rajya_format">%2$d आसीन राज्यसभा सांसदों में से %1$d प्रदर्शित</string>
+    <string name="mps_members_count_one">%1$d सदस्य</string>
+    <string name="mps_members_count_other">%1$d सदस्य</string>
+    <string name="mps_state_sheet_title">राज्य / केंद्रशासित प्रदेश से फ़िल्टर करें</string>
+    <string name="mps_vacant_seat">रिक्त</string>
+    <string name="mps_vacant_seat_detail">रिक्त सीट</string>
+    <string name="mps_unknown_mp">अज्ञात सांसद</string>
+    <string name="mps_independent">निर्दलीय</string>
+    <string name="mps_nominated">मनोनीत</string>
+    <string name="mps_term_ends_format">कार्यकाल समाप्ति: %1$d</string>
+    <string name="mps_term_unavailable">कार्यकाल वर्ष अनुपलब्ध</string>
+    <string name="mps_empty_title">कोई मेल खाने वाला संसद सदस्य नहीं मिला</string>
+    <string name="mps_empty_subtitle">किसी अन्य सांसद का नाम, निर्वाचन क्षेत्र, राज्य या पार्टी फ़िल्टर खोजने का प्रयास करें।</string>
+    <string name="mps_empty_reset_btn">खोज और फ़िल्टर रीसेट करें</string>
+    <string name="mps_detail_title">संसद सदस्य (सांसद) प्रोफ़ाइल</string>
+    <string name="mps_detail_field_house">सदन</string>
+    <string name="mps_detail_field_constituency">निर्वाचन क्षेत्र</string>
+    <string name="mps_detail_constituency_no_format">%1$s (संख्या %2$d)</string>
+    <string name="mps_detail_field_state">राज्य / केंद्रशासित प्रदेश</string>
+    <string name="mps_detail_field_reservation">आरक्षण श्रेणी</string>
+    <string name="mps_detail_field_party">राजनीतिक दल</string>
+    <string name="mps_detail_field_gender">लिंग</string>
+    <string name="mps_detail_field_term_end">कार्यकाल समाप्ति वर्ष</string>
+    <string name="mps_detail_reason_vacancy">रिक्तता का कारण</string>
+    <string name="mps_detail_notes">टिप्पणी</string>
+    <string name="mps_public_sources_footer">सार्वजनिक स्रोतों से संकलित डेटा। नवीनतम परिवर्तनों को प्रतिबिंबित नहीं कर सकता है।</string>
+</resources>

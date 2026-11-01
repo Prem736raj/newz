@@ -1,15 +1,21 @@
 package com.example
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,32 +23,33 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.BookmarkAdded
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,9 +81,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,9 +93,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.data.local.SurakshaDatabase
+import com.example.data.local.UserPreferencesRepository
 import com.example.data.model.AppLanguage
+import com.example.data.model.LanguageTier
 import com.example.data.model.ThemeMode
 import com.example.data.remote.IndianCrimeNewsRssClient
+import com.example.data.remote.SurakshaTranslationService
 import com.example.data.repository.MpsRepository
 import com.example.data.repository.SurakshaFirestoreRepository
 import com.example.ui.auth.SurakshaAuthScreen
@@ -102,6 +114,8 @@ import com.example.ui.theme.SurakshaChronicleTheme
 import com.example.ui.viewmodel.MpsViewModel
 import com.example.ui.viewmodel.SurakshaViewModel
 import com.google.firebase.Firebase
+import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
@@ -109,6 +123,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 
 internal fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
     val listener = FirebaseAuth.AuthStateListener { auth ->
@@ -118,9 +133,31 @@ internal fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
     awaitClose { removeAuthStateListener(listener) }
 }
 
+private fun configureAppCheck(context: Context, intent: Intent) {
+    val isDebuggable = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    if (!isDebuggable) {
+        return
+    }
+
+    val debugToken = intent.getStringExtra("app_check_debug_token")
+    if (debugToken != null) {
+        context.getSharedPreferences(
+            "com.google.firebase.appcheck.debug.store",
+            Context.MODE_PRIVATE
+        ).edit {
+            putString("com.google.firebase.appcheck.debug.ARCHITECTURAL_DEBUG_SECRET", debugToken)
+        }
+    }
+
+    Firebase.appCheck.installAppCheckProviderFactory(
+        DebugAppCheckProviderFactory.getInstance()
+    )
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        runCatching { configureAppCheck(this, intent) }
         enableEdgeToEdge()
         setContent {
             SurakshaRootApp()
@@ -130,20 +167,248 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SurakshaRootApp(auth: FirebaseAuth = Firebase.auth) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val prefsRepo = remember(context) { UserPreferencesRepository(context.applicationContext) }
+    val initialPrefs = remember(prefsRepo) { prefsRepo.readInitialPreferencesBlocking() }
+    val userPrefs by prefsRepo.preferencesFlow.collectAsStateWithLifecycle(initialValue = initialPrefs)
+
     val currentUser by auth.authStateFlow().collectAsStateWithLifecycle(initialValue = auth.currentUser)
-    val user = currentUser
-    if (user == null) {
-        SurakshaChronicleTheme {
-            SurakshaAuthScreen(onAuthSuccess = {})
+    var showSignInScreen by rememberSaveable { mutableStateOf(false) }
+
+    val systemDark = isSystemInDarkTheme()
+    val useDarkTheme = when (userPrefs.themeMode) {
+        ThemeMode.SYSTEM -> systemDark
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
+    if (!userPrefs.hasCompletedLanguageOnboarding) {
+        SurakshaChronicleTheme(
+            darkTheme = useDarkTheme,
+            appLanguage = userPrefs.appLanguage,
+            fontScale = userPrefs.fontScale
+        ) {
+            FirstRunLanguageOnboardingScreen(
+                selectedLanguage = userPrefs.appLanguage,
+                onSelectLanguage = { chosen ->
+                    scope.launch {
+                        prefsRepo.setAppLanguage(chosen)
+                    }
+                },
+                onConfirm = { chosen ->
+                    scope.launch {
+                        prefsRepo.completeLanguageOnboarding(chosen)
+                    }
+                }
+            )
+        }
+        return
+    }
+
+    if (showSignInScreen && currentUser == null) {
+        SurakshaChronicleTheme(
+            darkTheme = useDarkTheme,
+            appLanguage = userPrefs.appLanguage,
+            fontScale = userPrefs.fontScale
+        ) {
+            SurakshaAuthScreen(
+                onAuthSuccess = { showSignInScreen = false },
+                onContinueAsGuest = { showSignInScreen = false }
+            )
         }
     } else {
-        SurakshaAuthenticatedShell(currentUserId = user.uid)
+        SurakshaAuthenticatedShell(
+            currentUserId = currentUser?.uid ?: "guest_user",
+            onRequestSignIn = { showSignInScreen = true }
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SurakshaAuthenticatedShell(currentUserId: String) {
+fun FirstRunLanguageOnboardingScreen(
+    selectedLanguage: AppLanguage,
+    onSelectLanguage: (AppLanguage) -> Unit,
+    onConfirm: (AppLanguage) -> Unit
+) {
+    val tierALanguages = remember { AppLanguage.entries.filter { it.tier == LanguageTier.TIER_A } }
+    val tierBLanguages = remember { AppLanguage.entries.filter { it.tier == LanguageTier.TIER_B } }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("first_run_language_onboarding"),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Language,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_lang_badge),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.onboarding_lang_title),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Text(
+                text = stringResource(R.string.onboarding_lang_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Text(
+                text = stringResource(R.string.onboarding_tier_a_header),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                tierALanguages.forEach { lang ->
+                    LanguageSelectionCard(
+                        language = lang,
+                        selected = selectedLanguage == lang,
+                        onClick = { onSelectLanguage(lang) }
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.onboarding_tier_b_header),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                tierBLanguages.forEach { lang ->
+                    LanguageSelectionCard(
+                        language = lang,
+                        selected = selectedLanguage == lang,
+                        onClick = { onSelectLanguage(lang) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { onConfirm(selectedLanguage) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp)
+                    .testTag("onboarding_continue_button"),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.onboarding_continue_btn, selectedLanguage.nativeName),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LanguageSelectionCard(
+    language: AppLanguage,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .heightIn(min = 60.dp)
+            .clickable(onClick = onClick)
+            .testTag("onboarding_lang_${language.code}"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column {
+                Text(
+                    text = language.nativeName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+                Text(
+                    text = language.englishName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = stringResource(R.string.cd_selected),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun SurakshaAuthenticatedShell(
+    currentUserId: String,
+    onRequestSignIn: () -> Unit = {}
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val credentialManager = remember(context) { CredentialManager.create(context) }
@@ -158,11 +423,16 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                 val databaseId = app.getString(R.string.firestore_database_id)
                 val firestore = FirebaseFirestore.getInstance(databaseId)
                 val roomDb = SurakshaDatabase.getInstance(app)
+                val prefsRepo = UserPreferencesRepository(app)
+                val translationDao = roomDb.translationCacheDao()
                 SurakshaViewModel(
                     firestoreRepository = SurakshaFirestoreRepository(firestore),
                     offlineDao = roomDb.savedCaseOfflineDao(),
                     rssClient = IndianCrimeNewsRssClient(),
-                    currentUserId = currentUserId
+                    currentUserId = currentUserId,
+                    userPreferencesRepository = prefsRepo,
+                    translationCacheDao = translationDao,
+                    translationService = SurakshaTranslationService(translationDao)
                 )
             }
         }
@@ -185,6 +455,8 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
     val filteredDossiers by viewModel.filteredDossiers.collectAsStateWithLifecycle()
     val savedForLifeDossiers by viewModel.savedForLifeDossiers.collectAsStateWithLifecycle()
     val followedDossiers by viewModel.followedDossiers.collectAsStateWithLifecycle()
+    val localizedHelplines by viewModel.localizedHelplines.collectAsStateWithLifecycle()
+    val localizedLegalGuides by viewModel.localizedLegalGuides.collectAsStateWithLifecycle()
     val filterState by viewModel.filterState.collectAsStateWithLifecycle()
     val globalSensitiveBlur by viewModel.globalSensitiveBlur.collectAsStateWithLifecycle()
     val revealedCaseIds by viewModel.revealedCaseIds.collectAsStateWithLifecycle()
@@ -211,6 +483,7 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
     var showSearchBar by rememberSaveable { mutableStateOf(true) }
     var showNotificationsDialog by rememberSaveable { mutableStateOf(false) }
     var showSettingsDialog by rememberSaveable { mutableStateOf(false) }
+    var showGuestSignInRequiredDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(bannerMessage) {
         bannerMessage?.let { msg ->
@@ -225,6 +498,7 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
 
     SurakshaChronicleTheme(
         darkTheme = useDarkTheme,
+        appLanguage = appLanguage,
         fontScale = fontScale
     ) {
         if (selectedDossier != null) {
@@ -239,19 +513,31 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                 dossier = selectedDossier,
                 onBack = { viewModel.openDossierDetail(null) },
                 onToggleSaveForLife = { notes ->
-                    viewModel.toggleSaveForLife(selectedDossier, notes)
+                    if (viewModel.isGuestUser) {
+                        showGuestSignInRequiredDialog = true
+                    } else {
+                        viewModel.toggleSaveForLife(selectedDossier, notes)
+                    }
                 },
                 onToggleFollow = {
-                    viewModel.toggleFollowCase(selectedDossier)
+                    if (viewModel.isGuestUser) {
+                        showGuestSignInRequiredDialog = true
+                    } else {
+                        viewModel.toggleFollowCase(selectedDossier)
+                    }
                 },
                 onAddFollowUp = { dateLabel, stage, headline, details ->
-                    viewModel.addFollowUpMilestone(
-                        dossier = selectedDossier,
-                        updateDateLabel = dateLabel,
-                        newStage = stage,
-                        headline = headline,
-                        details = details
-                    )
+                    if (viewModel.isGuestUser) {
+                        showGuestSignInRequiredDialog = true
+                    } else {
+                        viewModel.addFollowUpMilestone(
+                            dossier = selectedDossier,
+                            updateDateLabel = dateLabel,
+                            newStage = stage,
+                            headline = headline,
+                            details = details
+                        )
+                    }
                 },
                 onSubmitCorrection = { type, details ->
                     viewModel.submitCorrectionOrPrivacyReport(selectedDossier.id, type, details)
@@ -294,16 +580,8 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                 HomeSearchableTopAppBar(
                     searchQuery = filterState.searchQuery,
                     onSearchQueryChange = viewModel::updateSearchQuery,
-                    titleText = if (appLanguage == AppLanguage.HINDI) {
-                        "सुरक्षा क्रॉनिकल"
-                    } else {
-                        "Suraksha Chronicle"
-                    },
-                    subtitleText = if (appLanguage == AppLanguage.HINDI) {
-                        "शीर्षक से आगे। तथ्यों का अनुसरण करें।"
-                    } else {
-                        "Beyond the headline. Follow the facts."
-                    },
+                    titleText = stringResource(R.string.app_name),
+                    subtitleText = stringResource(R.string.app_tagline),
                     showSearchInput = (currentTab == 0 && showSearchBar),
                     onSearchButtonClick = {
                         showSearchBar = true
@@ -329,7 +607,7 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                                     } else {
                                         Icons.Default.NotificationsNone
                                     },
-                                    contentDescription = "Case Update Notifications",
+                                    contentDescription = stringResource(R.string.cd_notifications),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -347,7 +625,7 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                                 } else {
                                     Icons.Default.Visibility
                                 },
-                                contentDescription = "Toggle Sensitive Content Blur",
+                                contentDescription = stringResource(R.string.cd_sensitive_blur),
                                 tint = if (globalSensitiveBlur) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
@@ -364,7 +642,7 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = "App Settings & Preferences",
+                                contentDescription = stringResource(R.string.cd_settings),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -376,11 +654,11 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 1.dp
                 ) {
-                    val homeLabel = if (appLanguage == AppLanguage.HINDI) "होम" else "Home"
-                    val trackLabel = if (appLanguage == AppLanguage.HINDI) "ट्रैक" else "Track"
-                    val savedLabel = if (appLanguage == AppLanguage.HINDI) "सहेजे गए" else "Saved"
-                    val safetyLabel = if (appLanguage == AppLanguage.HINDI) "सुरक्षा" else "Safety"
-                    val mpsLabel = if (appLanguage == AppLanguage.HINDI) "सांसद" else "MPs"
+                    val homeLabel = stringResource(R.string.nav_home)
+                    val trackLabel = stringResource(R.string.nav_track)
+                    val savedLabel = stringResource(R.string.nav_saved)
+                    val safetyLabel = stringResource(R.string.nav_safety)
+                    val mpsLabel = stringResource(R.string.nav_mps)
 
                     NavigationBarItem(
                         selected = currentTab == 0,
@@ -509,18 +787,42 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                         onLoadMore = viewModel::loadMoreFeedItems,
                         onRevealBlur = viewModel::revealCaseContent,
                         onOpenDossier = { viewModel.openDossierDetail(it.id) },
-                        onToggleSaveForLife = { viewModel.toggleSaveForLife(it) },
-                        onToggleFollow = { viewModel.toggleFollowCase(it) },
-                        onAddFollowUp = { dossier, dateLabel, stage, headline, details ->
-                            viewModel.addFollowUpMilestone(
-                                dossier = dossier,
-                                updateDateLabel = dateLabel,
-                                newStage = stage,
-                                headline = headline,
-                                details = details
-                            )
+                        onToggleSaveForLife = {
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.toggleSaveForLife(it)
+                            }
                         },
-                        onArchiveNewIncident = viewModel::archiveNewIncidentForLife
+                        onToggleFollow = {
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.toggleFollowCase(it)
+                            }
+                        },
+                        onAddFollowUp = { dossier, dateLabel, stage, headline, details ->
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.addFollowUpMilestone(
+                                    dossier = dossier,
+                                    updateDateLabel = dateLabel,
+                                    newStage = stage,
+                                    headline = headline,
+                                    details = details
+                                )
+                            }
+                        },
+                        onArchiveNewIncident = { title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes ->
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.archiveNewIncidentForLife(
+                                    title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes
+                                )
+                            }
+                        }
                     )
                     1 -> FollowUpTrackerScreen(
                         allDossiers = filteredDossiers,
@@ -537,16 +839,32 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                         onApplyLocation = viewModel::applyLocationSelection,
                         onRevealBlur = viewModel::revealCaseContent,
                         onOpenDossier = { viewModel.openDossierDetail(it.id) },
-                        onToggleSaveForLife = { viewModel.toggleSaveForLife(it) },
-                        onToggleFollow = { viewModel.toggleFollowCase(it) },
+                        onToggleSaveForLife = {
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.toggleSaveForLife(it)
+                            }
+                        },
+                        onToggleFollow = {
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.toggleFollowCase(it)
+                            }
+                        },
                         onAddFollowUp = { dossier, dateLabel, stage, headline, details ->
-                            viewModel.addFollowUpMilestone(
-                                dossier = dossier,
-                                updateDateLabel = dateLabel,
-                                newStage = stage,
-                                headline = headline,
-                                details = details
-                            )
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.addFollowUpMilestone(
+                                    dossier = dossier,
+                                    updateDateLabel = dateLabel,
+                                    newStage = stage,
+                                    headline = headline,
+                                    details = details
+                                )
+                            }
                         },
                         onQuickSelectJurisdiction = { st, dist, ct ->
                             viewModel.applyLocationSelection(st, dist, ct)
@@ -560,18 +878,42 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                         revealedIds = revealedCaseIds,
                         onRevealBlur = viewModel::revealCaseContent,
                         onOpenDossier = { viewModel.openDossierDetail(it.id) },
-                        onToggleSaveForLife = { viewModel.toggleSaveForLife(it) },
-                        onToggleFollow = { viewModel.toggleFollowCase(it) },
-                        onAddFollowUp = { dossier, dateLabel, stage, headline, details ->
-                            viewModel.addFollowUpMilestone(
-                                dossier = dossier,
-                                updateDateLabel = dateLabel,
-                                newStage = stage,
-                                headline = headline,
-                                details = details
-                            )
+                        onToggleSaveForLife = {
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.toggleSaveForLife(it)
+                            }
                         },
-                        onArchiveNewIncident = viewModel::archiveNewIncidentForLife,
+                        onToggleFollow = {
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.toggleFollowCase(it)
+                            }
+                        },
+                        onAddFollowUp = { dossier, dateLabel, stage, headline, details ->
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.addFollowUpMilestone(
+                                    dossier = dossier,
+                                    updateDateLabel = dateLabel,
+                                    newStage = stage,
+                                    headline = headline,
+                                    details = details
+                                )
+                            }
+                        },
+                        onArchiveNewIncident = { title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes ->
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.archiveNewIncidentForLife(
+                                    title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes
+                                )
+                            }
+                        },
                         onQuickSelectJurisdiction = { st, dist, ct ->
                             viewModel.applyLocationSelection(st, dist, ct)
                             currentTab = 0
@@ -579,8 +921,8 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                     )
                     3 -> DataAndSafetyScreen(
                         states = viewModel.allStates,
-                        helplines = viewModel.emergencyHelplines,
-                        legalGuides = viewModel.legalRightsGuides,
+                        helplines = localizedHelplines,
+                        legalGuides = localizedLegalGuides,
                         onSelectStateForFeed = { stateName ->
                             viewModel.selectState(stateName)
                             currentTab = 0
@@ -601,12 +943,47 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
             }
         }
 
+        if (showGuestSignInRequiredDialog) {
+            AlertDialog(
+                onDismissRequest = { showGuestSignInRequiredDialog = false },
+                title = {
+                    Text(
+                        text = stringResource(R.string.guest_sign_in_required_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.guest_sign_in_required_body),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showGuestSignInRequiredDialog = false
+                            onRequestSignIn()
+                        },
+                        modifier = Modifier.testTag("guest_prompt_sign_in_button")
+                    ) {
+                        Text(stringResource(R.string.guest_sign_in_action))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showGuestSignInRequiredDialog = false }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            )
+        }
+
         if (showNotificationsDialog) {
             AlertDialog(
                 onDismissRequest = { showNotificationsDialog = false },
                 title = {
                     Text(
-                        text = "Case Update Alerts",
+                        text = stringResource(R.string.notifications_dialog_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -620,12 +997,12 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Followed Case Notifications",
+                                    text = stringResource(R.string.notifications_followed_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "Notify when chargesheets, court hearings, or verified updates are logged.",
+                                    text = stringResource(R.string.notifications_followed_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -641,17 +1018,18 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
 
                         if (followedDossiers.isEmpty()) {
                             Text(
-                                text = "You are not following any cases yet. Tap 'Follow' on any news report or case card to track confirmed milestones.",
+                                text = stringResource(R.string.notifications_empty_text),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
                             Text(
-                                text = "Currently following ${followedDossiers.size} case(s):",
+                                text = stringResource(R.string.notifications_following_count, followedDossiers.size),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             followedDossiers.take(4).forEach { dossier ->
+                                val stageLabel = stringResource(dossier.caseStage.labelRes)
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(10.dp),
@@ -667,7 +1045,7 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
-                                            text = "${dossier.caseStage.label} • ${dossier.timelineUpdates.lastOrNull()?.dateLabel ?: dossier.incidentDateLabel}",
+                                            text = "$stageLabel • ${dossier.timelineUpdates.lastOrNull()?.dateLabel ?: dossier.incidentDateLabel}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -679,7 +1057,7 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                 },
                 confirmButton = {
                     TextButton(onClick = { showNotificationsDialog = false }) {
-                        Text("Done")
+                        Text(stringResource(R.string.action_done))
                     }
                 }
             )
@@ -690,15 +1068,18 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                 onDismissRequest = { showSettingsDialog = false },
                 title = {
                     Text(
-                        text = "Reading & Display Preferences",
+                        text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         Text(
-                            text = "Appearance",
+                            text = stringResource(R.string.settings_theme_label),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -707,43 +1088,55 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                                 FilterChip(
                                     selected = themeMode == mode,
                                     onClick = { viewModel.setThemeMode(mode) },
-                                    label = { Text(mode.label, maxLines = 1) },
+                                    label = { Text(stringResource(mode.labelRes), maxLines = 1) },
                                     modifier = Modifier.testTag("theme_mode_${mode.name.lowercase()}")
                                 )
                             }
                         }
 
                         Text(
-                            text = "Text Size",
+                            text = stringResource(R.string.settings_font_scale_label),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             listOf(
-                                1.0f to "1.0x Standard",
-                                1.3f to "1.3x Large",
-                                2.0f to "2.0x Max"
-                            ).forEach { (scaleValue, label) ->
+                                0.85f to R.string.settings_font_scale_small,
+                                1.0f to R.string.settings_font_scale_standard,
+                                1.3f to R.string.settings_font_scale_large,
+                                1.6f to R.string.settings_font_scale_max
+                            ).forEach { (scaleValue, labelRes) ->
                                 FilterChip(
                                     selected = kotlin.math.abs(fontScale - scaleValue) < 0.05f,
                                     onClick = { viewModel.setFontScale(scaleValue) },
-                                    label = { Text(label, maxLines = 1) },
-                                    modifier = Modifier.testTag("font_scale_${label.lowercase().replace(" ", "_")}")
+                                    label = { Text(stringResource(labelRes), maxLines = 1) },
+                                    modifier = Modifier.testTag("font_scale_${scaleValue}")
                                 )
                             }
                         }
 
                         Text(
-                            text = "Interface Language",
+                            text = stringResource(R.string.settings_language_label),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.settings_language_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             AppLanguage.entries.forEach { lang ->
                                 FilterChip(
                                     selected = appLanguage == lang,
                                     onClick = { viewModel.setAppLanguage(lang) },
-                                    label = { Text(lang.label, maxLines = 1) },
+                                    label = { Text(lang.nativeName, maxLines = 1) },
                                     modifier = Modifier.testTag("lang_${lang.name.lowercase()}")
                                 )
                             }
@@ -758,11 +1151,11 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Sensitive Headline Blur",
+                                    text = stringResource(R.string.settings_sensitive_blur_title),
                                     style = MaterialTheme.typography.titleSmall
                                 )
                                 Text(
-                                    text = "Require tap-to-read on graphic incident summaries",
+                                    text = stringResource(R.string.settings_sensitive_blur_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -775,39 +1168,66 @@ fun SurakshaAuthenticatedShell(currentUserId: String) {
 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                        OutlinedButton(
-                            onClick = {
-                                showSettingsDialog = false
-                                signOutFromSuraksha(
-                                    credentialManager = credentialManager,
-                                    onSignOutComplete = {},
-                                    scope = scope
+                        if (viewModel.isGuestUser) {
+                            OutlinedButton(
+                                onClick = {
+                                    showSettingsDialog = false
+                                    onRequestSignIn()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                                    .testTag("sign_in_from_settings_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Login,
+                                    contentDescription = stringResource(R.string.cd_sign_in),
+                                    modifier = Modifier.size(18.dp)
                                 )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp)
-                                .testTag("sign_out_button"),
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Logout,
-                                contentDescription = "Sign Out",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Sign Out of Archive",
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.settings_sign_in_btn),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = {
+                                    showSettingsDialog = false
+                                    signOutFromSuraksha(
+                                        credentialManager = credentialManager,
+                                        onSignOutComplete = {},
+                                        scope = scope
+                                    )
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                                    .testTag("sign_out_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                                    contentDescription = stringResource(R.string.cd_sign_out),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.settings_sign_out_btn),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 },
                 confirmButton = {
                     TextButton(onClick = { showSettingsDialog = false }) {
-                        Text("Close")
+                        Text(stringResource(R.string.action_close))
                     }
                 }
             )

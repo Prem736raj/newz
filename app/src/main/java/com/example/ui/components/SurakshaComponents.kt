@@ -42,10 +42,10 @@ import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -75,15 +75,16 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.data.model.CaseDossier
 import com.example.data.model.CaseStage
 import com.example.data.model.CityJurisdiction
-import com.example.data.model.DistrictJurisdiction
 import com.example.data.model.SensitivityLevel
 import com.example.data.model.StateJurisdiction
 import com.example.data.model.TimelineUpdateItem
@@ -93,7 +94,6 @@ import com.example.ui.theme.WarningIndicator
 
 /**
  * Compact location pill ("All India ▾" or "State ▸ City ▾") for the Home and Track top bars.
- * Replaces the cluttered 3-dropdown block on the main screen.
  */
 @Composable
 fun CompactLocationSelectorPill(
@@ -104,14 +104,13 @@ fun CompactLocationSelectorPill(
     onReset: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val allIndiaLabel = stringResource(R.string.jurisdiction_all_india)
     val isFiltered = selectedState != "All India"
-    val labelText = remember(selectedState, selectedDistrict, selectedCity) {
-        when {
-            selectedState == "All India" -> "All India"
-            selectedDistrict == "All Districts" -> selectedState
-            selectedCity == "All Cities" -> "$selectedState ▸ $selectedDistrict"
-            else -> "$selectedCity, $selectedState"
-        }
+    val labelText = when {
+        selectedState == "All India" -> allIndiaLabel
+        selectedDistrict == "All Districts" -> selectedState
+        selectedCity == "All Cities" -> "$selectedState ▸ $selectedDistrict"
+        else -> "$selectedCity, $selectedState"
     }
 
     Surface(
@@ -134,7 +133,7 @@ fun CompactLocationSelectorPill(
         ) {
             Icon(
                 imageVector = Icons.Default.LocationOn,
-                contentDescription = "Select location filter",
+                contentDescription = stringResource(R.string.cd_select_location),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp)
             )
@@ -158,7 +157,7 @@ fun CompactLocationSelectorPill(
             if (isFiltered && onReset != null) {
                 Icon(
                     imageVector = Icons.Default.Clear,
-                    contentDescription = "Reset location filter",
+                    contentDescription = stringResource(R.string.cd_clear_jurisdiction),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier
                         .size(16.dp)
@@ -219,6 +218,10 @@ fun LocationFilterBottomSheet(
         }
     }
 
+    val allIndiaLabel = stringResource(R.string.jurisdiction_all_india)
+    val allDistrictsLabel = stringResource(R.string.jurisdiction_all_districts)
+    val allCitiesLabel = stringResource(R.string.jurisdiction_all_cities)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -235,14 +238,14 @@ fun LocationFilterBottomSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Filter by Location",
+                        text = stringResource(R.string.location_sheet_title),
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Select State/UT, District, and City to filter reports",
+                        text = stringResource(R.string.location_sheet_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -257,7 +260,7 @@ fun LocationFilterBottomSheet(
                     },
                     modifier = Modifier.testTag("sheet_reset_location_button")
                 ) {
-                    Text("Reset")
+                    Text(stringResource(R.string.action_reset))
                 }
             }
 
@@ -266,12 +269,20 @@ fun LocationFilterBottomSheet(
             OutlinedTextField(
                 value = locationSearchQuery,
                 onValueChange = { locationSearchQuery = it },
-                placeholder = { Text("Search state, district, or city...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search locations") },
+                placeholder = { Text(stringResource(R.string.location_sheet_search_placeholder)) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = stringResource(R.string.cd_search_locations)
+                    )
+                },
                 trailingIcon = {
                     if (locationSearchQuery.isNotBlank()) {
                         IconButton(onClick = { locationSearchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                            Icon(
+                                Icons.Default.Clear,
+                                contentDescription = stringResource(R.string.cd_clear_search)
+                            )
                         }
                     }
                 },
@@ -286,11 +297,11 @@ fun LocationFilterBottomSheet(
 
             // 1. State / UT Selector
             CascadingLocationDropdownField(
-                label = "State / Union Territory",
-                selectedValue = draftState,
+                label = stringResource(R.string.location_field_state_ut),
+                selectedValue = if (draftState == "All India") allIndiaLabel else draftState,
                 options = listOf("All India") + filteredStates.map { it.stateName },
                 enabled = true,
-                placeholderText = "All India",
+                placeholderText = allIndiaLabel,
                 testTagName = "dropdown_state_selector",
                 onOptionSelected = { newState ->
                     draftState = newState
@@ -304,11 +315,11 @@ fun LocationFilterBottomSheet(
 
             // 2. District Selector
             CascadingLocationDropdownField(
-                label = "District",
-                selectedValue = draftDistrict,
+                label = stringResource(R.string.location_field_district),
+                selectedValue = if (draftDistrict == "All Districts") allDistrictsLabel else draftDistrict,
                 options = listOf("All Districts") + availableDistricts.map { it.districtName },
                 enabled = draftState != "All India" && availableDistricts.isNotEmpty(),
-                placeholderText = "Select a State/UT first",
+                placeholderText = stringResource(R.string.location_placeholder_select_state_first),
                 testTagName = "dropdown_district_selector",
                 onOptionSelected = { newDistrict ->
                     draftDistrict = newDistrict
@@ -321,11 +332,11 @@ fun LocationFilterBottomSheet(
 
             // 3. City / Town Selector
             CascadingLocationDropdownField(
-                label = "City / Locality",
-                selectedValue = draftCity,
+                label = stringResource(R.string.location_field_city),
+                selectedValue = if (draftCity == "All Cities") allCitiesLabel else draftCity,
                 options = listOf("All Cities") + availableCities.map { it.cityName },
                 enabled = draftState != "All India" && draftDistrict != "All Districts" && availableCities.isNotEmpty(),
-                placeholderText = "Select a District first",
+                placeholderText = stringResource(R.string.location_placeholder_select_district_first),
                 testTagName = "dropdown_city_selector",
                 onOptionSelected = { newCity ->
                     draftCity = newCity
@@ -336,7 +347,7 @@ fun LocationFilterBottomSheet(
             // Quick State Chips for rapid one-tap selection
             Spacer(modifier = Modifier.height(14.dp))
             Text(
-                text = "Quick Select State",
+                text = stringResource(R.string.location_quick_select_state),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -352,7 +363,7 @@ fun LocationFilterBottomSheet(
                         draftDistrict = "All Districts"
                         draftCity = "All Cities"
                     },
-                    label = { Text("All India") }
+                    label = { Text(allIndiaLabel) }
                 )
                 filteredStates.forEach { st ->
                     FilterChip(
@@ -395,7 +406,7 @@ fun LocationFilterBottomSheet(
                         .heightIn(min = 48.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Reset Filters", maxLines = 1)
+                    Text(stringResource(R.string.action_reset_location_filters), maxLines = 1)
                 }
                 Button(
                     onClick = {
@@ -407,7 +418,7 @@ fun LocationFilterBottomSheet(
                         .testTag("apply_location_filter_button"),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Apply Filters", maxLines = 1)
+                    Text(stringResource(R.string.action_apply_filters), maxLines = 1)
                 }
             }
 
@@ -532,18 +543,24 @@ fun CompactRepresentativeCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.AccountBalance,
-                        contentDescription = "Constituency Information",
+                        contentDescription = stringResource(R.string.cd_constituency_info),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Column {
                         Text(
-                            text = "Constituency Representatives • ${cityRep.cityName}",
+                            text = stringResource(R.string.rep_card_title_format, cityRep.cityName),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "MLA: ${cityRep.mlaName} (${cityRep.mlaParty}) • MP: ${cityRep.mpName} (${cityRep.mpParty})",
+                            text = stringResource(
+                                R.string.rep_card_mla_mp_compact,
+                                cityRep.mlaName,
+                                cityRep.mlaParty,
+                                cityRep.mpName,
+                                cityRep.mpParty
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -553,7 +570,11 @@ fun CompactRepresentativeCard(
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse details" else "Expand details",
+                    contentDescription = if (expanded) {
+                        stringResource(R.string.cd_collapse_details)
+                    } else {
+                        stringResource(R.string.cd_expand_details)
+                    },
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -563,25 +584,40 @@ fun CompactRepresentativeCard(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Assembly (MLA): ${cityRep.mlaName} — ${cityRep.mlaConstituency} (${cityRep.mlaParty})",
+                        text = stringResource(
+                            R.string.rep_card_assembly_format,
+                            cityRep.mlaName,
+                            cityRep.mlaConstituency,
+                            cityRep.mlaParty
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Lok Sabha (MP): ${cityRep.mpName} — ${cityRep.mpConstituency} (${cityRep.mpParty})",
+                        text = stringResource(
+                            R.string.rep_card_loksabha_format,
+                            cityRep.mpName,
+                            cityRep.mpConstituency,
+                            cityRep.mpParty
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Police Jurisdiction: ${cityRep.policeRange} ($districtName, $stateName)",
+                        text = stringResource(
+                            R.string.rep_card_police_format,
+                            cityRep.policeRange,
+                            districtName,
+                            stateName
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Source: Election Commission of India (ECI) Official Roll • Last verified Oct 2026. Listed for civic reference; inclusion does not imply personal liability for individual offences.",
+                        text = stringResource(R.string.rep_card_source_disclaimer),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -593,14 +629,7 @@ fun CompactRepresentativeCard(
 
 /**
  * Clean, modern Editorial News Card for the Home Screen.
- * Shows:
- * 1. Category label + Verification badge
- * 2. Clear headline
- * 3. Short factual summary
- * 4. Location
- * 5. Publisher/source + Original publication date
- * 6. Latest verified update date/time when applicable
- * 7. Bookmark & Follow actions (48dp touch targets)
+ * Supports "Translated automatically" badge and "View original" toggle when machine-translated.
  */
 @Composable
 fun EditorialNewsCard(
@@ -615,6 +644,18 @@ fun EditorialNewsCard(
 ) {
     val latestUpdate = dossier.timelineUpdates.lastOrNull()
     val hasVerifiedFollowUp = dossier.timelineUpdates.size > 1
+    var showOriginalText by remember(dossier.id) { mutableStateOf(false) }
+
+    val displayTitle = if (showOriginalText && dossier.originalTitle.isNotBlank()) {
+        dossier.originalTitle
+    } else {
+        dossier.title
+    }
+    val displaySummary = if (showOriginalText && dossier.originalSummary.isNotBlank()) {
+        dossier.originalSummary
+    } else {
+        dossier.summary
+    }
 
     Card(
         modifier = modifier
@@ -656,7 +697,7 @@ fun EditorialNewsCard(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "Featured Dossier",
+                                text = stringResource(R.string.card_featured_badge),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -681,6 +722,15 @@ fun EditorialNewsCard(
                 VerificationBadgePill(status = dossier.verificationStatus)
             }
 
+            if (dossier.isMachineTranslated) {
+                Spacer(modifier = Modifier.height(6.dp))
+                MachineTranslationBannerRow(
+                    showingOriginal = showOriginalText,
+                    onToggleOriginal = { showOriginalText = !showOriginalText },
+                    testTagPrefix = "news_card_${dossier.id}"
+                )
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             // 2. Headline & 3. Factual Summary (with optional sensitivity advisory blur)
@@ -694,20 +744,20 @@ fun EditorialNewsCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Info,
-                                contentDescription = "Content Advisory",
+                                contentDescription = stringResource(R.string.cd_content_advisory),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = dossier.sensitivityLevel.label,
+                                text = stringResource(dossier.sensitivityLevel.labelRes),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = dossier.title,
+                            text = displayTitle,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier
@@ -725,17 +775,17 @@ fun EditorialNewsCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Visibility,
-                                contentDescription = "Show report",
+                                contentDescription = stringResource(R.string.cd_show_report),
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Show Report", maxLines = 1)
+                            Text(stringResource(R.string.card_show_report), maxLines = 1)
                         }
                     }
                 }
             } else {
                 Text(
-                    text = dossier.title,
+                    text = displayTitle,
                     style = if (isFeatured) {
                         MaterialTheme.typography.headlineMedium
                     } else {
@@ -745,7 +795,7 @@ fun EditorialNewsCard(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = dossier.summary,
+                    text = displaySummary,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = if (isFeatured) 4 else 3,
@@ -768,13 +818,17 @@ fun EditorialNewsCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Timeline,
-                            contentDescription = "Case update available",
+                            contentDescription = stringResource(R.string.cd_case_update_available),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Latest Update (${latestUpdate.dateLabel}) • ${dossier.caseStage.label}",
+                                text = stringResource(
+                                    R.string.card_latest_update_format,
+                                    latestUpdate.dateLabel,
+                                    stringResource(dossier.caseStage.labelRes)
+                                ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold,
@@ -844,9 +898,9 @@ fun EditorialNewsCard(
                                 Icons.Default.NotificationsNone
                             },
                             contentDescription = if (dossier.isFollowed) {
-                                "Following case updates"
+                                stringResource(R.string.cd_unfollow_case)
                             } else {
-                                "Follow case updates"
+                                stringResource(R.string.cd_follow_case)
                             },
                             tint = if (dossier.isFollowed) {
                                 MaterialTheme.colorScheme.primary
@@ -869,9 +923,9 @@ fun EditorialNewsCard(
                                 Icons.Default.BookmarkBorder
                             },
                             contentDescription = if (dossier.isSavedForLife) {
-                                "Remove from saved articles"
+                                stringResource(R.string.cd_remove_saved)
                             } else {
-                                "Save article"
+                                stringResource(R.string.cd_save_for_offline)
                             },
                             tint = if (dossier.isSavedForLife) {
                                 MaterialTheme.colorScheme.primary
@@ -887,9 +941,59 @@ fun EditorialNewsCard(
 }
 
 /**
+ * Reusable badge + toggle for machine-translated items ("Translated automatically" + "View original").
+ */
+@Composable
+fun MachineTranslationBannerRow(
+    showingOriginal: Boolean,
+    onToggleOriginal: () -> Unit,
+    testTagPrefix: String = "dossier",
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("${testTagPrefix}_translation_banner"),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Translate,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = stringResource(R.string.translation_badge_auto),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        TextButton(
+            onClick = onToggleOriginal,
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+            modifier = Modifier.testTag("${testTagPrefix}_toggle_original")
+        ) {
+            Text(
+                text = if (showingOriginal) {
+                    stringResource(R.string.translation_view_translated)
+                } else {
+                    stringResource(R.string.translation_view_original)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+/**
  * Dedicated Case Tracker card for the "Never Forgotten" (Track) & Saved screens.
- * Cleanly displays neutral title, location, original incident date, current verified status,
- * last verified update, Follow/Unfollow button, and expandable timeline.
  */
 @Composable
 fun CaseDossierCard(
@@ -906,7 +1010,18 @@ fun CaseDossierCard(
     var timelineExpanded by remember(dossier.id, initiallyExpandedTimeline) {
         mutableStateOf(initiallyExpandedTimeline)
     }
-    val latestUpdate = dossier.timelineUpdates.lastOrNull()
+    var showOriginalText by remember(dossier.id) { mutableStateOf(false) }
+
+    val displayTitle = if (showOriginalText && dossier.originalTitle.isNotBlank()) {
+        dossier.originalTitle
+    } else {
+        dossier.title
+    }
+    val displaySummary = if (showOriginalText && dossier.originalSummary.isNotBlank()) {
+        dossier.originalSummary
+    } else {
+        dossier.summary
+    }
 
     Card(
         modifier = Modifier
@@ -927,7 +1042,7 @@ fun CaseDossierCard(
         shape = RoundedCornerShape(14.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Top Status Row: Current Verified Stage + Last Verified Date
+            // Top Status Row: Current Verified Stage + Verification Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -938,7 +1053,7 @@ fun CaseDossierCard(
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = dossier.caseStage.label,
+                        text = stringResource(dossier.caseStage.labelRes),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         fontWeight = FontWeight.SemiBold,
@@ -947,6 +1062,15 @@ fun CaseDossierCard(
                 }
 
                 VerificationBadgePill(status = dossier.verificationStatus)
+            }
+
+            if (dossier.isMachineTranslated) {
+                Spacer(modifier = Modifier.height(6.dp))
+                MachineTranslationBannerRow(
+                    showingOriginal = showOriginalText,
+                    onToggleOriginal = { showOriginalText = !showOriginalText },
+                    testTagPrefix = "dossier_card_${dossier.id}"
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -963,7 +1087,7 @@ fun CaseDossierCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.LocationOn,
-                    contentDescription = "Case location",
+                    contentDescription = stringResource(R.string.cd_case_location),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(14.dp)
                 )
@@ -986,7 +1110,7 @@ fun CaseDossierCard(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = dossier.sensitivityLevel.label,
+                            text = stringResource(dossier.sensitivityLevel.labelRes),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -997,19 +1121,19 @@ fun CaseDossierCard(
                                 .heightIn(min = 48.dp)
                                 .testTag("reveal_blur_${dossier.id}")
                         ) {
-                            Text("Show Case Summary", maxLines = 1)
+                            Text(stringResource(R.string.card_show_case_summary), maxLines = 1)
                         }
                     }
                 }
             } else {
                 Text(
-                    text = dossier.title,
+                    text = displayTitle,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = dossier.summary,
+                    text = displaySummary,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 3,
@@ -1020,7 +1144,12 @@ fun CaseDossierCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Original report: ${dossier.incidentDateLabel} (${dossier.daysSinceIncident} days tracked) • Last verified: ${dossier.lastVerifiedDate}",
+                text = stringResource(
+                    R.string.card_original_report_format,
+                    dossier.incidentDateLabel,
+                    dossier.daysSinceIncident,
+                    dossier.lastVerifiedDate
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1068,7 +1197,11 @@ fun CaseDossierCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (dossier.isFollowed) "Following" else "Follow Case",
+                            text = if (dossier.isFollowed) {
+                                stringResource(R.string.card_action_following)
+                            } else {
+                                stringResource(R.string.card_action_follow_case)
+                            },
                             style = MaterialTheme.typography.labelLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -1092,7 +1225,11 @@ fun CaseDossierCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (dossier.isSavedForLife) "Saved" else "Save",
+                        text = if (dossier.isSavedForLife) {
+                            stringResource(R.string.card_action_saved)
+                        } else {
+                            stringResource(R.string.card_action_save)
+                        },
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1109,7 +1246,7 @@ fun CaseDossierCard(
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        text = "Open Timeline",
+                        text = stringResource(R.string.card_action_open_timeline),
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1123,16 +1260,34 @@ fun CaseDossierCard(
 @Composable
 fun VerificationBadgePill(status: VerificationStatus) {
     val (icon, tintColor, label) = when (status) {
-        VerificationStatus.CONFIRMED -> Triple(Icons.Default.Verified, SuccessIndicator, "Confirmed")
-        VerificationStatus.REPORTED_UNCONFIRMED -> Triple(Icons.Default.Schedule, WarningIndicator, "Reported")
-        VerificationStatus.AWAITING_VERIFICATION -> Triple(Icons.Default.Info, WarningIndicator, "Unverified")
-        VerificationStatus.CORRECTED -> Triple(Icons.Default.CheckCircle, SuccessIndicator, "Corrected")
+        VerificationStatus.CONFIRMED -> Triple(
+            Icons.Default.Verified,
+            SuccessIndicator,
+            stringResource(R.string.verification_pill_confirmed)
+        )
+        VerificationStatus.REPORTED_UNCONFIRMED -> Triple(
+            Icons.Default.Schedule,
+            WarningIndicator,
+            stringResource(R.string.verification_pill_reported)
+        )
+        VerificationStatus.AWAITING_VERIFICATION -> Triple(
+            Icons.Default.Info,
+            WarningIndicator,
+            stringResource(R.string.verification_pill_unverified)
+        )
+        VerificationStatus.CORRECTED -> Triple(
+            Icons.Default.CheckCircle,
+            SuccessIndicator,
+            stringResource(R.string.verification_pill_corrected)
+        )
     }
+    val statusFullLabel = stringResource(status.labelRes)
+    val semanticsDesc = stringResource(R.string.verification_semantics_prefix, statusFullLabel)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.semantics {
-            contentDescription = "Verification status: ${status.label}"
+            contentDescription = semanticsDesc
         }
     ) {
         Icon(
@@ -1190,7 +1345,10 @@ fun CaseTimelineCardSection(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "Case Timeline (${timelineUpdates.size} Milestones)",
+                            text = stringResource(
+                                R.string.card_timeline_milestones_format,
+                                timelineUpdates.size
+                            ),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -1208,13 +1366,21 @@ fun CaseTimelineCardSection(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (expanded) "Hide" else "View",
+                        text = if (expanded) {
+                            stringResource(R.string.card_action_hide)
+                        } else {
+                            stringResource(R.string.card_action_view)
+                        },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (expanded) "Collapse timeline" else "Expand timeline",
+                        contentDescription = if (expanded) {
+                            stringResource(R.string.cd_collapse_timeline)
+                        } else {
+                            stringResource(R.string.cd_expand_timeline)
+                        },
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -1248,7 +1414,7 @@ fun CaseTimelineCardSection(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Submit Timeline Update",
+                                text = stringResource(R.string.card_submit_timeline_update),
                                 style = MaterialTheme.typography.labelLarge,
                                 maxLines = 1
                             )
@@ -1355,7 +1521,11 @@ fun CaseChronologicalTimelineList(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Source: ${item.sourceName} • ${item.lastCheckedDate}",
+                            text = stringResource(
+                                R.string.card_timeline_source_format,
+                                item.sourceName,
+                                item.lastCheckedDate
+                            ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1394,14 +1564,17 @@ fun CaseStageProgressStrip(
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
-                    text = "Confirmed Status: ${currentStage.label}",
+                    text = stringResource(
+                        R.string.card_confirmed_status_format,
+                        stringResource(currentStage.labelRes)
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
             }
             Text(
-                text = "$followUpCount Milestones",
+                text = stringResource(R.string.card_milestones_count_format, followUpCount),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary
             )

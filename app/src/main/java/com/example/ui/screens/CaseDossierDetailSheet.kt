@@ -72,13 +72,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.data.model.CaseDossier
 import com.example.data.model.CaseStage
 import com.example.ui.components.CaseStageProgressStrip
+import com.example.ui.components.MachineTranslationBannerRow
 import com.example.ui.components.VerificationBadgePill
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -102,7 +105,27 @@ fun CaseDossierDetailScreen(
     var showCorrectionModal by remember { mutableStateOf(false) }
     var showMpMlaExpanded by remember { mutableStateOf(false) }
     var showPrivateNoteEditor by remember { mutableStateOf(false) }
+    var showOriginalLanguage by remember(dossier.id) { mutableStateOf(false) }
     var personalNoteInput by remember(dossier.id) { mutableStateOf(dossier.personalNotes) }
+
+    val displayTitle = if (showOriginalLanguage && dossier.originalTitle != null) {
+        dossier.originalTitle
+    } else {
+        dossier.title
+    }
+    val displaySummary = if (showOriginalLanguage && dossier.originalSummary != null) {
+        dossier.originalSummary
+    } else {
+        dossier.summary
+    }
+    val displayFullReport = if (showOriginalLanguage && dossier.originalFullReport != null) {
+        dossier.originalFullReport
+    } else {
+        dossier.fullReport
+    }
+
+    val stageLabel = stringResource(dossier.caseStage.labelRes)
+    val shareChooserTitle = stringResource(R.string.dossier_share_chooser_title)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -138,7 +161,7 @@ fun CaseDossierDetailScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
+                                    contentDescription = stringResource(R.string.cd_close_dossier)
                                 )
                             }
                             Column(modifier = Modifier.padding(end = 8.dp)) {
@@ -166,43 +189,43 @@ fun CaseDossierDetailScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.TextDecrease,
-                                    contentDescription = "Decrease font size"
+                                    contentDescription = stringResource(R.string.cd_decrease_font)
                                 )
                             }
                             IconButton(
-                                onClick = { fontScale = (fontScale + 0.1f).coerceAtMost(1.35f) },
+                                onClick = { fontScale = (fontScale + 0.1f).coerceAtMost(1.6f) },
                                 modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.TextIncrease,
-                                    contentDescription = "Increase font size"
+                                    contentDescription = stringResource(R.string.cd_increase_font)
                                 )
                             }
                             IconButton(
                                 onClick = {
                                     val shareText = buildString {
-                                        appendLine(dossier.title)
-                                        appendLine("Location: ${dossier.cityName}, ${dossier.districtName}, ${dossier.stateName}")
-                                        appendLine("Reported by: ${dossier.sourceName} (${dossier.incidentDateLabel})")
-                                        appendLine("Confirmed Status: ${dossier.caseStage.label}")
+                                        appendLine(displayTitle)
+                                        appendLine("${dossier.cityName}, ${dossier.districtName}, ${dossier.stateName}")
+                                        appendLine("${dossier.sourceName} (${dossier.incidentDateLabel})")
+                                        appendLine(stageLabel)
                                         if (dossier.sourceUrl.isNotBlank()) {
-                                            appendLine("Source Link: ${dossier.sourceUrl}")
+                                            appendLine(dossier.sourceUrl)
                                         }
                                         appendLine()
-                                        appendLine(dossier.summary)
+                                        appendLine(displaySummary)
                                     }
                                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, dossier.title)
+                                        putExtra(Intent.EXTRA_SUBJECT, displayTitle)
                                         putExtra(Intent.EXTRA_TEXT, shareText)
                                     }
-                                    context.startActivity(Intent.createChooser(sendIntent, "Share Verified Report"))
+                                    context.startActivity(Intent.createChooser(sendIntent, shareChooserTitle))
                                 },
                                 modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
-                                    contentDescription = "Share verified source link"
+                                    contentDescription = stringResource(R.string.cd_share_report)
                                 )
                             }
                         }
@@ -241,13 +264,21 @@ fun CaseDossierDetailScreen(
 
                 // 2. Headline
                 Text(
-                    text = dossier.title,
+                    text = displayTitle,
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontSize = (22 * fontScale).sp,
                         lineHeight = (30 * fontScale).sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
+
+                if (dossier.isMachineTranslated) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    MachineTranslationBannerRow(
+                        showingOriginal = showOriginalLanguage,
+                        onToggleOriginal = { showOriginalLanguage = !showOriginalLanguage }
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -259,12 +290,16 @@ fun CaseDossierDetailScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Source: ${dossier.sourceName}",
+                            text = stringResource(R.string.dossier_source_prefix, dossier.sourceName),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Published: ${dossier.incidentDateLabel} • Last verified: ${dossier.lastVerifiedDate}",
+                            text = stringResource(
+                                R.string.dossier_published_verified_format,
+                                dossier.incidentDateLabel,
+                                dossier.lastVerifiedDate
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -280,11 +315,11 @@ fun CaseDossierDetailScreen(
                             },
                             modifier = Modifier.testTag("open_original_source_link")
                         ) {
-                            Text("Original Source")
+                            Text(stringResource(R.string.dossier_original_source_btn))
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = "Open publisher link",
+                                contentDescription = stringResource(R.string.cd_open_source),
                                 modifier = Modifier.size(15.dp)
                             )
                         }
@@ -319,7 +354,11 @@ fun CaseDossierDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (dossier.isFollowed) "Following Case" else "Follow Case",
+                                text = if (dossier.isFollowed) {
+                                    stringResource(R.string.dossier_btn_following_case)
+                                } else {
+                                    stringResource(R.string.dossier_btn_follow_case)
+                                },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -342,7 +381,11 @@ fun CaseDossierDetailScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (dossier.isSavedForLife) "Saved in Archive" else "Save Article",
+                            text = if (dossier.isSavedForLife) {
+                                stringResource(R.string.dossier_btn_saved_archive)
+                            } else {
+                                stringResource(R.string.dossier_btn_save_article)
+                            },
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -360,12 +403,16 @@ fun CaseDossierDetailScreen(
                         onClick = { showPrivateNoteEditor = !showPrivateNoteEditor }
                     ) {
                         Text(
-                            text = if (personalNoteInput.isNotBlank()) "Edit Private Note" else "Add Private Note",
+                            text = if (personalNoteInput.isNotBlank()) {
+                                stringResource(R.string.dossier_edit_private_note)
+                            } else {
+                                stringResource(R.string.dossier_add_private_note)
+                            },
                             style = MaterialTheme.typography.labelMedium
                         )
                     }
                     Text(
-                        text = "Saved items are cached for offline reading",
+                        text = stringResource(R.string.dossier_offline_cache_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -376,7 +423,7 @@ fun CaseDossierDetailScreen(
                         OutlinedTextField(
                             value = personalNoteInput,
                             onValueChange = { personalNoteInput = it },
-                            label = { Text("Private Note (Stored in your personal archive)") },
+                            label = { Text(stringResource(R.string.dossier_private_note_label)) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
                         )
@@ -393,13 +440,13 @@ fun CaseDossierDetailScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Key Factual Summary",
+                            text = stringResource(R.string.dossier_key_summary_header),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = dossier.summary,
+                            text = displaySummary,
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontSize = (15.5f * fontScale).sp,
                                 lineHeight = (23 * fontScale).sp
@@ -413,13 +460,13 @@ fun CaseDossierDetailScreen(
 
                 // 6. Main Factual Details
                 Text(
-                    text = "Confirmed Case Background & Reporting",
+                    text = stringResource(R.string.dossier_background_header),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = dossier.fullReport,
+                    text = displayFullReport,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = (16 * fontScale).sp,
                         lineHeight = (25 * fontScale).sp
@@ -436,7 +483,7 @@ fun CaseDossierDetailScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Editorial & Legal Note: To comply with POCSO Section 23 and BNS Section 72, identifying details of survivors and minors are strictly withheld. Under Indian law, an FIR, remand, or chargesheet records a procedural stage and does not establish guilt prior to court conviction.",
+                        text = stringResource(R.string.dossier_legal_privacy_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(12.dp)
@@ -474,12 +521,12 @@ fun CaseDossierDetailScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Case Timeline",
+                                    text = stringResource(R.string.dossier_timeline_title),
                                     style = MaterialTheme.typography.titleLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Chronological record • Last verified ${dossier.lastVerifiedDate}",
+                                    text = stringResource(R.string.dossier_timeline_subtitle_format, dossier.lastVerifiedDate),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -497,7 +544,7 @@ fun CaseDossierDetailScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Log Update", maxLines = 1)
+                                Text(stringResource(R.string.dossier_log_update_btn), maxLines = 1)
                             }
                         }
 
@@ -513,7 +560,7 @@ fun CaseDossierDetailScreen(
                                 onClick = { newestFirst = false },
                                 label = {
                                     Text(
-                                        text = "Chronological (Oldest first)",
+                                        text = stringResource(R.string.dossier_sort_chronological),
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                 },
@@ -524,7 +571,7 @@ fun CaseDossierDetailScreen(
                                 onClick = { newestFirst = true },
                                 label = {
                                     Text(
-                                        text = "Latest first",
+                                        text = stringResource(R.string.dossier_sort_latest),
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                 },
@@ -541,6 +588,17 @@ fun CaseDossierDetailScreen(
                                 index + 1
                             }
                             val isLatestMilestone = stepNumber == orderedUpdates.size
+                            val itemHeadline = if (showOriginalLanguage && item.originalHeadline != null) {
+                                item.originalHeadline
+                            } else {
+                                item.headline
+                            }
+                            val itemDetails = if (showOriginalLanguage && item.originalDetails != null) {
+                                item.originalDetails
+                            } else {
+                                item.details
+                            }
+                            val resolvedStageBadge = stringResource(CaseStage.fromCode(item.stageBadge).labelRes)
 
                             Row(
                                 modifier = Modifier
@@ -610,13 +668,13 @@ fun CaseDossierDetailScreen(
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = item.headline,
+                                        text = itemHeadline,
                                         style = MaterialTheme.typography.titleSmall,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = item.details,
+                                        text = itemDetails,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -627,7 +685,12 @@ fun CaseDossierDetailScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "Stage: ${item.stageBadge} • Source: ${item.sourceName} • ${item.lastCheckedDate}",
+                                            text = stringResource(
+                                                R.string.dossier_timeline_meta_format,
+                                                resolvedStageBadge,
+                                                item.sourceName,
+                                                item.lastCheckedDate
+                                            ),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.weight(1f)
@@ -643,7 +706,7 @@ fun CaseDossierDetailScreen(
                                                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = "Reference",
+                                                    text = stringResource(R.string.dossier_reference_btn),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     maxLines = 1
                                                 )
@@ -690,7 +753,7 @@ fun CaseDossierDetailScreen(
                                 )
                                 Column {
                                     Text(
-                                        text = "Jurisdiction & Elected Representatives",
+                                        text = stringResource(R.string.dossier_jurisdiction_title),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -703,13 +766,23 @@ fun CaseDossierDetailScreen(
                             }
                             Icon(
                                 imageVector = if (showMpMlaExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = if (showMpMlaExpanded) "Collapse representatives" else "Expand representatives"
+                                contentDescription = if (showMpMlaExpanded) {
+                                    stringResource(R.string.cd_collapse_representatives)
+                                } else {
+                                    stringResource(R.string.cd_expand_representatives)
+                                }
                             )
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "MLA: ${dossier.mlaName} (${dossier.mlaParty})  •  MP: ${dossier.mpName} (${dossier.mpParty})",
+                            text = stringResource(
+                                R.string.dossier_mla_mp_line_format,
+                                dossier.mlaName,
+                                dossier.mlaParty,
+                                dossier.mpName,
+                                dossier.mpParty
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -719,35 +792,47 @@ fun CaseDossierDetailScreen(
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Text(
-                                    text = "Legislative Assembly (MLA): ${dossier.mlaName}",
+                                    text = stringResource(R.string.dossier_mla_detail_format, dossier.mlaName),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Constituency: ${dossier.mlaConstituency} • Party: ${dossier.mlaParty}",
+                                    text = stringResource(
+                                        R.string.dossier_constituency_party_format,
+                                        dossier.mlaConstituency,
+                                        dossier.mlaParty
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Lok Sabha (MP): ${dossier.mpName}",
+                                    text = stringResource(R.string.dossier_mp_detail_format, dossier.mpName),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Constituency: ${dossier.mpConstituency} • Party: ${dossier.mpParty}",
+                                    text = stringResource(
+                                        R.string.dossier_constituency_party_format,
+                                        dossier.mpConstituency,
+                                        dossier.mpParty
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Police Jurisdiction: ${dossier.policeJurisdiction}",
+                                    text = stringResource(R.string.dossier_police_jurisdiction_format, dossier.policeJurisdiction),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Data Source: ${dossier.representativeDataSource} • Last verified: ${dossier.lastVerifiedDate}. Representatives are displayed for civic oversight; inclusion does not imply personal responsibility for individual criminal acts.",
+                                    text = stringResource(
+                                        R.string.dossier_rep_disclaimer_format,
+                                        dossier.representativeDataSource,
+                                        dossier.lastVerifiedDate
+                                    ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -760,7 +845,7 @@ fun CaseDossierDetailScreen(
 
                 // Applicable Statutes
                 Text(
-                    text = "Relevant Legal Provisions",
+                    text = stringResource(R.string.dossier_relevant_laws_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -799,12 +884,13 @@ fun CaseDossierDetailScreen(
                 if (relatedDossiers.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        text = "Related Reporting & Connected Cases",
+                        text = stringResource(R.string.dossier_related_reporting_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     relatedDossiers.take(3).forEach { related ->
+                        val relatedStageLabel = stringResource(related.caseStage.labelRes)
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -833,7 +919,7 @@ fun CaseDossierDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${related.caseStage.label} • ${related.sourceName}",
+                                    text = "$relatedStageLabel • ${related.sourceName}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -865,12 +951,16 @@ fun CaseDossierDetailScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Verification & Corrections History",
+                                    text = stringResource(R.string.dossier_corrections_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Last verified: ${dossier.lastVerifiedDate} • Status: ${dossier.verificationStatus.label}",
+                                    text = stringResource(
+                                        R.string.dossier_corrections_status_format,
+                                        dossier.lastVerifiedDate,
+                                        stringResource(dossier.verificationStatus.labelRes)
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -888,24 +978,28 @@ fun CaseDossierDetailScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Report Issue", maxLines = 1)
+                                Text(stringResource(R.string.dossier_report_issue_btn), maxLines = 1)
                             }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "• Editorial Audit: Primary source attribution (${dossier.sourceName}) and POCSO/BNS redaction verified (${dossier.lastVerifiedDate}).",
+                            text = stringResource(
+                                R.string.dossier_audit_bullet_1_format,
+                                dossier.sourceName,
+                                dossier.lastVerifiedDate
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "• Publisher Licensing: Factual summary published for public-interest tracking; full copyright remains with the original publisher.",
+                            text = stringResource(R.string.dossier_audit_bullet_2),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (correctionLogs.isEmpty()) {
                             Text(
-                                text = "• Corrections Log: No formal corrections or retractions issued to date.",
+                                text = stringResource(R.string.dossier_audit_no_corrections),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -958,14 +1052,15 @@ fun AddFollowUpDialog(
     onSubmit: (String, CaseStage, String, String) -> Unit
 ) {
     val milestonePresets = listOf(
-        "1 Month Follow-Up • Day 30",
-        "2 Months Follow-Up • Day 60",
-        "3 Months Follow-Up • Day 90",
-        "6 Months Follow-Up • Day 180",
-        "Court / Investigation Update"
+        stringResource(R.string.dossier_preset_30),
+        stringResource(R.string.dossier_preset_60),
+        stringResource(R.string.dossier_preset_90),
+        stringResource(R.string.dossier_preset_180),
+        stringResource(R.string.dossier_preset_court)
     )
+    val defaultDateLabel = stringResource(R.string.dossier_followup_day_update_format, dossier.daysSinceIncident)
     var dateLabel by remember {
-        mutableStateOf("Day ${dossier.daysSinceIncident} Update")
+        mutableStateOf(defaultDateLabel)
     }
     var selectedStage by remember { mutableStateOf(dossier.caseStage) }
     var headline by remember { mutableStateOf("") }
@@ -975,7 +1070,7 @@ fun AddFollowUpDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Submit Case Timeline Update",
+                text = stringResource(R.string.dossier_followup_dialog_title),
                 style = MaterialTheme.typography.titleLarge
             )
         },
@@ -985,12 +1080,12 @@ fun AddFollowUpDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "User-submitted updates are saved to your archive and labeled 'Submitted • Awaiting Verification' until confirmed against official police or court records. Never include identifying information about minors.",
+                    text = stringResource(R.string.dossier_followup_dialog_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Quick Milestone Presets:",
+                    text = stringResource(R.string.dossier_followup_presets_label),
                     style = MaterialTheme.typography.labelMedium
                 )
                 FlowRow(
@@ -1008,14 +1103,14 @@ fun AddFollowUpDialog(
                 OutlinedTextField(
                     value = dateLabel,
                     onValueChange = { dateLabel = it },
-                    label = { Text("Date or Milestone Label") },
+                    label = { Text(stringResource(R.string.dossier_followup_date_label)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("timeline_update_date_input"),
                     singleLine = true
                 )
                 Text(
-                    text = "Confirmed Procedural Stage:",
+                    text = stringResource(R.string.dossier_followup_stage_label),
                     style = MaterialTheme.typography.labelMedium
                 )
                 FlowRow(
@@ -1026,14 +1121,14 @@ fun AddFollowUpDialog(
                         FilterChip(
                             selected = selectedStage == stage,
                             onClick = { selectedStage = stage },
-                            label = { Text(stage.label, style = MaterialTheme.typography.labelSmall) }
+                            label = { Text(stringResource(stage.labelRes), style = MaterialTheme.typography.labelSmall) }
                         )
                     }
                 }
                 OutlinedTextField(
                     value = headline,
                     onValueChange = { headline = it },
-                    label = { Text("Factual Update Summary (Required)") },
+                    label = { Text(stringResource(R.string.dossier_followup_headline_label)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("timeline_update_headline_input")
@@ -1041,7 +1136,7 @@ fun AddFollowUpDialog(
                 OutlinedTextField(
                     value = details,
                     onValueChange = { details = it },
-                    label = { Text("Details & Official Source / Order Reference (Required)") },
+                    label = { Text(stringResource(R.string.dossier_followup_details_label)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("timeline_update_details_input"),
@@ -1055,12 +1150,12 @@ fun AddFollowUpDialog(
                 enabled = headline.trim().length >= 3 && details.trim().length >= 3,
                 modifier = Modifier.testTag("timeline_update_submit_button")
             ) {
-                Text("Save Timeline Update")
+                Text(stringResource(R.string.dossier_followup_submit_btn))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
@@ -1074,10 +1169,10 @@ fun ReportCorrectionDialog(
     onSubmit: (issueType: String, details: String) -> Unit
 ) {
     val issueTypes = listOf(
-        "Factual Correction",
-        "Privacy / Minor Identity Protection",
-        "Updated Court / Police Order",
-        "Representative Mapping Correction"
+        stringResource(R.string.dossier_issue_factual),
+        stringResource(R.string.dossier_issue_privacy),
+        stringResource(R.string.dossier_issue_court),
+        stringResource(R.string.dossier_issue_rep)
     )
     var selectedIssue by remember { mutableStateOf(issueTypes.first()) }
     var details by remember { mutableStateOf("") }
@@ -1086,7 +1181,7 @@ fun ReportCorrectionDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Report Correction or Privacy Concern",
+                text = stringResource(R.string.dossier_correction_dialog_title),
                 style = MaterialTheme.typography.titleLarge
             )
         },
@@ -1096,7 +1191,7 @@ fun ReportCorrectionDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "Report an inaccuracy or request redaction for: ${dossierTitle.take(70)}",
+                    text = stringResource(R.string.dossier_correction_dialog_prefix, dossierTitle.take(70)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1115,7 +1210,7 @@ fun ReportCorrectionDialog(
                 OutlinedTextField(
                     value = details,
                     onValueChange = { details = it },
-                    label = { Text("Describe the correction or official source URL") },
+                    label = { Text(stringResource(R.string.dossier_correction_field_label)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("correction_details_input"),
@@ -1129,12 +1224,12 @@ fun ReportCorrectionDialog(
                 enabled = details.trim().length >= 5,
                 modifier = Modifier.testTag("submit_correction_confirm_button")
             ) {
-                Text("Submit Report")
+                Text(stringResource(R.string.dossier_correction_submit_btn))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

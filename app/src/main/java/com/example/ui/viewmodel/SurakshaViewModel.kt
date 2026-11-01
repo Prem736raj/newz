@@ -5,12 +5,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.SavedCaseOfflineDao
 import com.example.data.local.SurakshaArchiveSeedData
+import com.example.data.local.SurakshaHindiSeedTranslations
+import com.example.data.local.TranslationCacheDao
+import com.example.data.local.UserPreferencesRepository
 import com.example.data.model.AppLanguage
+import com.example.data.model.TranslationCacheEntity
 import com.example.data.model.CaseDossier
 import com.example.data.model.CaseFollowUp
 import com.example.data.model.CaseStage
 import com.example.data.model.CityJurisdiction
 import com.example.data.model.DistrictJurisdiction
+import com.example.data.model.EmergencyHelpline
+import com.example.data.model.LegalRightGuide
 import com.example.data.model.SavedCase
 import com.example.data.model.SavedCaseOfflineEntity
 import com.example.data.model.SensitivityLevel
@@ -19,13 +25,17 @@ import com.example.data.model.ThemeMode
 import com.example.data.model.TimelineUpdateItem
 import com.example.data.model.VerificationStatus
 import com.example.data.remote.IndianCrimeNewsRssClient
+import com.example.data.remote.SurakshaTranslationService
 import com.example.data.repository.SurakshaFirestoreRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -39,12 +49,20 @@ data class SurakshaFilterState(
     val onlyLongTermStalled: Boolean = false
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SurakshaViewModel(
     private val firestoreRepository: SurakshaFirestoreRepository,
     private val offlineDao: SavedCaseOfflineDao,
     private val rssClient: IndianCrimeNewsRssClient,
-    private val currentUserId: String
+    private val currentUserId: String,
+    private val userPreferencesRepository: UserPreferencesRepository? = null,
+    private val translationCacheDao: TranslationCacheDao? = null,
+    private val translationService: SurakshaTranslationService? = null
 ) : ViewModel() {
+
+    val isGuestUser: Boolean = currentUserId.isBlank() || currentUserId == "guest_user"
+
+    private val initialPrefs = userPreferencesRepository?.readInitialPreferencesBlocking()
 
     val allStates: List<StateJurisdiction> = SurakshaArchiveSeedData.stateJurisdictions
     val emergencyHelplines = SurakshaArchiveSeedData.emergencyHelplines
@@ -60,18 +78,27 @@ class SurakshaViewModel(
     val revealedCaseIds: StateFlow<Set<String>> = _revealedCaseIds.asStateFlow()
 
     private val _followedCaseIds = MutableStateFlow(
-        setOf("case_ap_elamanchili_chainsaw_2026", "case_wb_kolkata_medical_2024", "case_mh_badlapur_school_2024")
+        setOf(
+            "case_ap_school_chainsaw_01",
+            "case_wb_kolkata_medical_03",
+            "case_mh_badlapur_school_02"
+        )
     )
     val followedCaseIds: StateFlow<Set<String>> = _followedCaseIds.asStateFlow()
 
-    private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    private val _themeMode = MutableStateFlow(initialPrefs?.themeMode ?: ThemeMode.SYSTEM)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
-    private val _appLanguage = MutableStateFlow(AppLanguage.ENGLISH)
+    private val _appLanguage = MutableStateFlow(initialPrefs?.appLanguage ?: AppLanguage.ENGLISH)
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
-    private val _fontScale = MutableStateFlow(1.0f)
+    private val _fontScale = MutableStateFlow((initialPrefs?.fontScale ?: 1.0f).coerceIn(0.85f, 1.6f))
     val fontScale: StateFlow<Float> = _fontScale.asStateFlow()
+
+    private val _hasCompletedLanguageOnboarding = MutableStateFlow(
+        initialPrefs?.hasCompletedLanguageOnboarding ?: true
+    )
+    val hasCompletedLanguageOnboarding: StateFlow<Boolean> = _hasCompletedLanguageOnboarding.asStateFlow()
 
     private val _notificationsEnabled = MutableStateFlow(true)
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
@@ -95,17 +122,25 @@ class SurakshaViewModel(
     private val _correctionLogs = MutableStateFlow<Map<String, List<String>>>(emptyMap())
     val correctionLogs: StateFlow<Map<String, List<String>>> = _correctionLogs.asStateFlow()
 
-    private val cloudSavedCasesFlow = firestoreRepository.observeSavedCases(currentUserId)
-        .catch { e ->
-            Log.w("SurakshaVM", "Offline fallback for cloud saved_cases", e)
-            emit(emptyList())
-        }
+    private val cloudSavedCasesFlow = if (isGuestUser) {
+        flowOf(emptyList())
+    } else {
+        firestoreRepository.observeSavedCases(currentUserId)
+            .catch { e ->
+                Log.w("SurakshaVM", "Offline fallback for cloud saved_cases", e)
+                emit(emptyList())
+            }
+    }
 
-    private val cloudFollowUpsFlow = firestoreRepository.observeCaseFollowUps(currentUserId)
-        .catch { e ->
-            Log.w("SurakshaVM", "Offline fallback for cloud case_updates", e)
-            emit(emptyList())
-        }
+    private val cloudFollowUpsFlow = if (isGuestUser) {
+        flowOf(emptyList())
+    } else {
+        firestoreRepository.observeCaseFollowUps(currentUserId)
+            .catch { e ->
+                Log.w("SurakshaVM", "Offline fallback for cloud case_updates", e)
+                emit(emptyList())
+            }
+    }
 
     private val offlineSavedCasesFlow = offlineDao.observeAllSavedCases()
         .catch { e ->
@@ -113,7 +148,16 @@ class SurakshaViewModel(
             emit(emptyList())
         }
 
-    val allDossiers: StateFlow<List<CaseDossier>> = combine(
+    private val translationCacheFlow = _appLanguage.flatMapLatest { lang ->
+        if (lang == AppLanguage.ENGLISH || translationCacheDao == null) {
+            flowOf(emptyList())
+        } else {
+            translationCacheDao.observeTranslationsForLanguage(lang.code)
+                .catch { emit(emptyList()) }
+        }
+    }
+
+    private val baseMergedDossiersFlow = combine(
         cloudSavedCasesFlow,
         cloudFollowUpsFlow,
         offlineSavedCasesFlow,
@@ -121,12 +165,46 @@ class SurakshaViewModel(
         _followedCaseIds
     ) { cloudSaved, cloudUpdates, offlineSaved, liveRss, followedIds ->
         mergeAllDossiers(cloudSaved, cloudUpdates, offlineSaved, liveRss, followedIds)
+    }
+
+    val allDossiers: StateFlow<List<CaseDossier>> = combine(
+        baseMergedDossiersFlow,
+        _appLanguage,
+        translationCacheFlow
+    ) { merged, language, cacheEntries ->
+        localizeDossiers(merged, language, cacheEntries)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000L),
-        initialValue = SurakshaArchiveSeedData.buildInitialCaseDossiers().map {
-            it.copy(isFollowed = _followedCaseIds.value.contains(it.id))
-        }
+        initialValue = localizeDossiers(
+            dossiers = SurakshaArchiveSeedData.buildInitialCaseDossiers().map {
+                it.copy(isFollowed = _followedCaseIds.value.contains(it.id))
+            },
+            language = _appLanguage.value,
+            cacheEntries = emptyList()
+        )
+    )
+
+    val localizedHelplines: StateFlow<List<EmergencyHelpline>> = combine(
+        _appLanguage,
+        translationCacheFlow
+    ) { language, cacheEntries ->
+        localizeHelplinesList(emergencyHelplines, language, cacheEntries)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = localizeHelplinesList(emergencyHelplines, _appLanguage.value, emptyList())
+    )
+
+    val localizedLegalGuides: StateFlow<List<LegalRightGuide>> = combine(
+        _appLanguage,
+        translationCacheFlow
+    ) { language, cacheEntries ->
+        localizeLegalGuidesList(legalRightsGuides, language, cacheEntries)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = localizeLegalGuidesList(legalRightsGuides, _appLanguage.value, emptyList())
     )
 
     val filteredDossiers: StateFlow<List<CaseDossier>> = combine(
@@ -147,7 +225,9 @@ class SurakshaViewModel(
             val matchesStalled = !filter.onlyLongTermStalled || dossier.daysSinceIncident >= 30
             val matchesQuery = filter.searchQuery.isBlank() ||
                 dossier.title.contains(filter.searchQuery, ignoreCase = true) ||
+                dossier.originalTitle.contains(filter.searchQuery, ignoreCase = true) ||
                 dossier.summary.contains(filter.searchQuery, ignoreCase = true) ||
+                dossier.originalSummary.contains(filter.searchQuery, ignoreCase = true) ||
                 dossier.stateName.contains(filter.searchQuery, ignoreCase = true) ||
                 dossier.districtName.contains(filter.searchQuery, ignoreCase = true) ||
                 dossier.cityName.contains(filter.searchQuery, ignoreCase = true) ||
@@ -160,7 +240,7 @@ class SurakshaViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000L),
-        initialValue = SurakshaArchiveSeedData.buildInitialCaseDossiers()
+        initialValue = allDossiers.value
     )
 
     val savedForLifeDossiers: StateFlow<List<CaseDossier>> = combine(
@@ -186,6 +266,19 @@ class SurakshaViewModel(
     )
 
     init {
+        userPreferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.preferencesFlow.collect { prefs ->
+                    _appLanguage.value = prefs.appLanguage
+                    _themeMode.value = prefs.themeMode
+                    _fontScale.value = prefs.fontScale.coerceIn(0.85f, 1.6f)
+                    _hasCompletedLanguageOnboarding.value = prefs.hasCompletedLanguageOnboarding
+                }
+            }
+        }
+        viewModelScope.launch {
+            translationService?.ensureHindiSeedTranslationsCached()
+        }
         seedFlagshipAndhraPradeshCaseIfEmpty()
         refreshLiveIndianNews()
     }
@@ -282,14 +375,40 @@ class SurakshaViewModel(
 
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
+        viewModelScope.launch {
+            userPreferencesRepository?.setThemeMode(mode)
+        }
     }
 
     fun setAppLanguage(language: AppLanguage) {
+        val changed = _appLanguage.value != language
         _appLanguage.value = language
+        _hasCompletedLanguageOnboarding.value = true
+        viewModelScope.launch {
+            userPreferencesRepository?.setAppLanguage(language)
+            if (language == AppLanguage.HINDI) {
+                translationService?.ensureHindiSeedTranslationsCached()
+            }
+            if (changed) {
+                refreshLiveIndianNews()
+            }
+            translationService?.translateUncachedDossiersIfNeeded(
+                dossiers = baseMergedDossiersFlowToSnapshot(),
+                targetLanguage = language
+            )
+        }
+    }
+
+    fun completeLanguageOnboarding(language: AppLanguage) {
+        setAppLanguage(language)
     }
 
     fun setFontScale(scale: Float) {
-        _fontScale.value = scale.coerceIn(0.85f, 2.0f)
+        val clamped = scale.coerceIn(0.85f, 1.6f)
+        _fontScale.value = clamped
+        viewModelScope.launch {
+            userPreferencesRepository?.setFontScale(clamped)
+        }
     }
 
     fun toggleNotificationsEnabled() {
@@ -357,15 +476,26 @@ class SurakshaViewModel(
 
     fun refreshLiveIndianNews(stateOverride: String? = null) {
         val targetState = stateOverride ?: _filterState.value.selectedState
+        val activeLang = _appLanguage.value
         viewModelScope.launch {
             _isRefreshingLive.value = true
             _feedSyncNote.value = null
             try {
-                val live = rssClient.fetchLiveIndianWomenSafetyDispatches(targetState)
+                val live = rssClient.fetchLiveIndianWomenSafetyDispatches(
+                    stateQuery = targetState,
+                    language = activeLang
+                )
                 if (live.isNotEmpty()) {
                     _liveRssDossiers.value = live
+                    if (activeLang != AppLanguage.ENGLISH) {
+                        translationService?.translateUncachedDossiersIfNeeded(
+                            dossiers = live,
+                            targetLanguage = activeLang
+                        )
+                    }
                 } else {
-                    _feedSyncNote.value = "Showing verified archival & cached reports (live syndication feed unreachable or rate-limited)."
+                    _feedSyncNote.value =
+                        "Showing verified archival & cached reports (live syndication feed unreachable or rate-limited)."
                 }
             } catch (e: Exception) {
                 _feedSyncNote.value = "Offline mode: displaying verified local archive."
@@ -379,7 +509,9 @@ class SurakshaViewModel(
         viewModelScope.launch {
             if (dossier.isSavedForLife) {
                 offlineDao.deleteSavedCaseById(dossier.id)
-                firestoreRepository.removeSavedCase(dossier.id)
+                if (!isGuestUser) {
+                    firestoreRepository.removeSavedCase(dossier.id)
+                }
                 _statusBannerMessage.value = "Removed from Saved Articles & Offline Cache."
             } else {
                 val note = personalNotes.ifBlank {
@@ -388,28 +520,32 @@ class SurakshaViewModel(
                     }
                 }
                 offlineDao.upsertSavedCase(dossier.toOfflineEntity(note))
-                val cloudModel = SavedCase(
-                    id = dossier.id,
-                    userId = currentUserId,
-                    title = dossier.title,
-                    summary = dossier.summary,
-                    fullReport = dossier.fullReport,
-                    stateName = dossier.stateName,
-                    districtName = dossier.districtName,
-                    cityName = dossier.cityName,
-                    mlaName = "${dossier.mlaName} (${dossier.mlaConstituency})",
-                    mpName = "${dossier.mpName} (${dossier.mpConstituency})",
-                    victimCategory = dossier.victimCategory,
-                    crimeCategory = dossier.crimeCategory,
-                    caseStage = dossier.caseStage.code,
-                    incidentDateLabel = dossier.incidentDateLabel,
-                    personalNotes = note
-                )
-                val res = firestoreRepository.saveCaseForLife(dossier.id, cloudModel)
-                _statusBannerMessage.value = if (res.isSuccess) {
-                    "Saved for offline reading & synced to your account."
+                if (!isGuestUser) {
+                    val cloudModel = SavedCase(
+                        id = dossier.id,
+                        userId = currentUserId,
+                        title = dossier.originalTitle.ifBlank { dossier.title },
+                        summary = dossier.originalSummary.ifBlank { dossier.summary },
+                        fullReport = dossier.originalFullReport.ifBlank { dossier.fullReport },
+                        stateName = dossier.stateName,
+                        districtName = dossier.districtName,
+                        cityName = dossier.cityName,
+                        mlaName = "${dossier.mlaName} (${dossier.mlaConstituency})",
+                        mpName = "${dossier.mpName} (${dossier.mpConstituency})",
+                        victimCategory = dossier.victimCategory,
+                        crimeCategory = dossier.crimeCategory,
+                        caseStage = dossier.caseStage.code,
+                        incidentDateLabel = dossier.incidentDateLabel,
+                        personalNotes = note
+                    )
+                    val res = firestoreRepository.saveCaseForLife(dossier.id, cloudModel)
+                    _statusBannerMessage.value = if (res.isSuccess) {
+                        "Saved for offline reading & synced to your account."
+                    } else {
+                        "Saved to device for offline reading (cloud sync pending)."
+                    }
                 } else {
-                    "Saved to device for offline reading (cloud sync pending)."
+                    _statusBannerMessage.value = "Saved to device for offline reading."
                 }
             }
         }
@@ -419,24 +555,26 @@ class SurakshaViewModel(
         viewModelScope.launch {
             val cleanNote = newNote.trim()
             offlineDao.upsertSavedCase(dossier.toOfflineEntity(cleanNote))
-            val cloudModel = SavedCase(
-                id = dossier.id,
-                userId = currentUserId,
-                title = dossier.title,
-                summary = dossier.summary,
-                fullReport = dossier.fullReport,
-                stateName = dossier.stateName,
-                districtName = dossier.districtName,
-                cityName = dossier.cityName,
-                mlaName = "${dossier.mlaName} (${dossier.mlaConstituency})",
-                mpName = "${dossier.mpName} (${dossier.mpConstituency})",
-                victimCategory = dossier.victimCategory,
-                crimeCategory = dossier.crimeCategory,
-                caseStage = dossier.caseStage.code,
-                incidentDateLabel = dossier.incidentDateLabel,
-                personalNotes = cleanNote
-            )
-            firestoreRepository.saveCaseForLife(dossier.id, cloudModel)
+            if (!isGuestUser) {
+                val cloudModel = SavedCase(
+                    id = dossier.id,
+                    userId = currentUserId,
+                    title = dossier.originalTitle.ifBlank { dossier.title },
+                    summary = dossier.originalSummary.ifBlank { dossier.summary },
+                    fullReport = dossier.originalFullReport.ifBlank { dossier.fullReport },
+                    stateName = dossier.stateName,
+                    districtName = dossier.districtName,
+                    cityName = dossier.cityName,
+                    mlaName = "${dossier.mlaName} (${dossier.mlaConstituency})",
+                    mpName = "${dossier.mpName} (${dossier.mpConstituency})",
+                    victimCategory = dossier.victimCategory,
+                    crimeCategory = dossier.crimeCategory,
+                    caseStage = dossier.caseStage.code,
+                    incidentDateLabel = dossier.incidentDateLabel,
+                    personalNotes = cleanNote
+                )
+                firestoreRepository.saveCaseForLife(dossier.id, cloudModel)
+            }
             _statusBannerMessage.value = "Private note saved."
         }
     }
@@ -451,41 +589,47 @@ class SurakshaViewModel(
         if (headline.isBlank() || details.isBlank()) return
         viewModelScope.launch {
             val updateId = "upd_${System.currentTimeMillis()}"
-            val result = firestoreRepository.addCaseFollowUp(
-                updateId = updateId,
-                caseId = dossier.id,
-                caseTitle = dossier.title,
-                updateDateLabel = updateDateLabel.ifBlank { "Day ${dossier.daysSinceIncident} Update" },
-                stageBadge = newStage.code,
-                headline = headline.trim(),
-                details = details.trim()
-            )
+            val result = if (!isGuestUser) {
+                firestoreRepository.addCaseFollowUp(
+                    updateId = updateId,
+                    caseId = dossier.id,
+                    caseTitle = dossier.originalTitle.ifBlank { dossier.title },
+                    updateDateLabel = updateDateLabel.ifBlank { "Day ${dossier.daysSinceIncident} Update" },
+                    stageBadge = newStage.code,
+                    headline = headline.trim(),
+                    details = details.trim()
+                )
+            } else {
+                Result.failure(IllegalStateException("Guest mode"))
+            }
             val updatedDossier = dossier.copy(caseStage = newStage)
             offlineDao.upsertSavedCase(
                 updatedDossier.toOfflineEntity(
                     dossier.personalNotes.ifBlank { "Latest logged update: $headline" }
                 )
             )
-            firestoreRepository.saveCaseForLife(
-                dossier.id,
-                SavedCase(
-                    id = dossier.id,
-                    userId = currentUserId,
-                    title = dossier.title,
-                    summary = dossier.summary,
-                    fullReport = dossier.fullReport,
-                    stateName = dossier.stateName,
-                    districtName = dossier.districtName,
-                    cityName = dossier.cityName,
-                    mlaName = "${dossier.mlaName} (${dossier.mlaConstituency})",
-                    mpName = "${dossier.mpName} (${dossier.mpConstituency})",
-                    victimCategory = dossier.victimCategory,
-                    crimeCategory = dossier.crimeCategory,
-                    caseStage = newStage.code,
-                    incidentDateLabel = dossier.incidentDateLabel,
-                    personalNotes = "Latest logged update: $headline"
+            if (!isGuestUser) {
+                firestoreRepository.saveCaseForLife(
+                    dossier.id,
+                    SavedCase(
+                        id = dossier.id,
+                        userId = currentUserId,
+                        title = dossier.originalTitle.ifBlank { dossier.title },
+                        summary = dossier.originalSummary.ifBlank { dossier.summary },
+                        fullReport = dossier.originalFullReport.ifBlank { dossier.fullReport },
+                        stateName = dossier.stateName,
+                        districtName = dossier.districtName,
+                        cityName = dossier.cityName,
+                        mlaName = "${dossier.mlaName} (${dossier.mlaConstituency})",
+                        mpName = "${dossier.mpName} (${dossier.mpConstituency})",
+                        victimCategory = dossier.victimCategory,
+                        crimeCategory = dossier.crimeCategory,
+                        caseStage = newStage.code,
+                        incidentDateLabel = dossier.incidentDateLabel,
+                        personalNotes = "Latest logged update: $headline"
+                    )
                 )
-            )
+            }
             _followedCaseIds.value = _followedCaseIds.value + dossier.id
             _statusBannerMessage.value = if (result.isSuccess) {
                 "Timeline update recorded (marked 'Submitted • Awaiting Verification' & synced)."
@@ -548,31 +692,169 @@ class SurakshaViewModel(
 
             offlineDao.upsertSavedCase(newDossier.toOfflineEntity(personalNotes))
             _followedCaseIds.value = _followedCaseIds.value + newCaseId
-            val cloudResult = firestoreRepository.saveCaseForLife(
-                newCaseId,
-                SavedCase(
-                    id = newCaseId,
-                    userId = currentUserId,
-                    title = newDossier.title,
-                    summary = newDossier.summary,
-                    fullReport = newDossier.fullReport,
-                    stateName = newDossier.stateName,
-                    districtName = newDossier.districtName,
-                    cityName = newDossier.cityName,
-                    mlaName = resolvedMla,
-                    mpName = resolvedMp,
-                    victimCategory = victimCategory,
-                    crimeCategory = crimeCategory,
-                    caseStage = caseStage.code,
-                    incidentDateLabel = newDossier.incidentDateLabel,
-                    personalNotes = personalNotes.ifBlank { "Archived in private vault." }
+            val cloudResult = if (!isGuestUser) {
+                firestoreRepository.saveCaseForLife(
+                    newCaseId,
+                    SavedCase(
+                        id = newCaseId,
+                        userId = currentUserId,
+                        title = newDossier.title,
+                        summary = newDossier.summary,
+                        fullReport = newDossier.fullReport,
+                        stateName = newDossier.stateName,
+                        districtName = newDossier.districtName,
+                        cityName = newDossier.cityName,
+                        mlaName = resolvedMla,
+                        mpName = resolvedMp,
+                        victimCategory = victimCategory,
+                        crimeCategory = crimeCategory,
+                        caseStage = caseStage.code,
+                        incidentDateLabel = newDossier.incidentDateLabel,
+                        personalNotes = personalNotes.ifBlank { "Archived in private vault." }
+                    )
                 )
-            )
+            } else {
+                Result.failure(IllegalStateException("Guest mode"))
+            }
             _statusBannerMessage.value = if (cloudResult.isSuccess) {
                 "Case archived in your Saved Vault (marked 'Awaiting Verification')."
             } else {
                 "Case archived locally in your Saved Vault."
             }
+        }
+    }
+
+    private fun baseMergedDossiersFlowToSnapshot(): List<CaseDossier> {
+        return SurakshaArchiveSeedData.buildInitialCaseDossiers() + _liveRssDossiers.value
+    }
+
+    private fun localizeDossiers(
+        dossiers: List<CaseDossier>,
+        language: AppLanguage,
+        cacheEntries: List<TranslationCacheEntity>
+    ): List<CaseDossier> {
+        if (language == AppLanguage.ENGLISH) {
+            return dossiers.map { d ->
+                d.copy(
+                    isMachineTranslated = false,
+                    originalTitle = d.title,
+                    originalSummary = d.summary,
+                    originalFullReport = d.fullReport
+                )
+            }
+        }
+
+        val cacheMap: Map<Pair<String, String>, String> = cacheEntries.associate {
+            (it.contentId to it.field) to it.text
+        }
+        val hindiSeedCases = if (language == AppLanguage.HINDI) {
+            SurakshaHindiSeedTranslations.hindiCaseMap
+        } else {
+            emptyMap()
+        }
+        val hindiSeedUpdates = if (language == AppLanguage.HINDI) {
+            SurakshaHindiSeedTranslations.hindiTimelineMap
+        } else {
+            emptyMap()
+        }
+
+        return dossiers.map { dossier ->
+            val seedCaseHi = hindiSeedCases[dossier.id]
+            val cachedTitle = cacheMap[dossier.id to "title"]
+            val cachedSummary = cacheMap[dossier.id to "summary"]
+            val cachedFullReport = cacheMap[dossier.id to "fullReport"]
+
+            val translatedTitle = seedCaseHi?.title ?: cachedTitle ?: dossier.title
+            val translatedSummary = seedCaseHi?.summary ?: cachedSummary ?: dossier.summary
+            val translatedFullReport = seedCaseHi?.fullReport ?: cachedFullReport ?: dossier.fullReport
+            val translatedVictim = seedCaseHi?.victimCategory ?: dossier.victimCategory
+            val translatedCrime = seedCaseHi?.crimeCategory ?: dossier.crimeCategory
+            val translatedDate = seedCaseHi?.incidentDateLabel ?: dossier.incidentDateLabel
+            val translatedWarning = seedCaseHi?.triggerWarning ?: dossier.triggerWarning
+
+            // Seed cases in Hindi are human-curated editorial translations; live RSS or AI-cached non-seed items are machine-translated
+            val isAutoTranslated = seedCaseHi == null && (
+                (cachedTitle != null && cachedTitle != dossier.title) ||
+                    (cachedSummary != null && cachedSummary != dossier.summary)
+                )
+
+            val localizedTimeline = dossier.timelineUpdates.map { item ->
+                val seedUpdHi = hindiSeedUpdates[item.id]
+                val cachedUpdHeadline = cacheMap[item.id to "headline"]
+                val cachedUpdDetails = cacheMap[item.id to "details"]
+                val newHeadline = seedUpdHi?.headline ?: cachedUpdHeadline ?: item.headline
+                val newDetails = seedUpdHi?.details ?: cachedUpdDetails ?: item.details
+                val newDateLabel = seedUpdHi?.dateLabel ?: item.dateLabel
+                val updAuto = seedUpdHi == null && (cachedUpdHeadline != null || cachedUpdDetails != null)
+                item.copy(
+                    dateLabel = newDateLabel,
+                    headline = newHeadline,
+                    details = newDetails,
+                    isMachineTranslated = updAuto,
+                    originalHeadline = item.originalHeadline.ifBlank { item.headline },
+                    originalDetails = item.originalDetails.ifBlank { item.details }
+                )
+            }
+
+            dossier.copy(
+                title = translatedTitle,
+                summary = translatedSummary,
+                fullReport = translatedFullReport,
+                victimCategory = translatedVictim,
+                crimeCategory = translatedCrime,
+                incidentDateLabel = translatedDate,
+                triggerWarning = translatedWarning,
+                timelineUpdates = localizedTimeline,
+                isMachineTranslated = isAutoTranslated,
+                originalTitle = dossier.originalTitle.ifBlank { dossier.title },
+                originalSummary = dossier.originalSummary.ifBlank { dossier.summary },
+                originalFullReport = dossier.originalFullReport.ifBlank { dossier.fullReport }
+            )
+        }
+    }
+
+    private fun localizeHelplinesList(
+        helplines: List<EmergencyHelpline>,
+        language: AppLanguage,
+        cacheEntries: List<TranslationCacheEntity>
+    ): List<EmergencyHelpline> {
+        if (language == AppLanguage.ENGLISH) return helplines
+        val cacheMap = cacheEntries.associate { (it.contentId to it.field) to it.text }
+        val hindiMap = if (language == AppLanguage.HINDI) SurakshaHindiSeedTranslations.hindiHelplineMap else emptyMap()
+
+        return helplines.map { h ->
+            val hi = hindiMap[h.id]
+            h.copy(
+                title = hi?.title ?: cacheMap[h.id to "title"] ?: h.title,
+                subtitle = hi?.subtitle ?: cacheMap[h.id to "subtitle"] ?: h.subtitle,
+                availability = hi?.availability ?: cacheMap[h.id to "availability"] ?: h.availability,
+                targetGroup = hi?.targetGroup ?: cacheMap[h.id to "targetGroup"] ?: h.targetGroup
+            )
+        }
+    }
+
+    private fun localizeLegalGuidesList(
+        guides: List<LegalRightGuide>,
+        language: AppLanguage,
+        cacheEntries: List<TranslationCacheEntity>
+    ): List<LegalRightGuide> {
+        if (language == AppLanguage.ENGLISH) return guides
+        val cacheMap = cacheEntries.associate { (it.contentId to it.field) to it.text }
+        val hindiMap = if (language == AppLanguage.HINDI) SurakshaHindiSeedTranslations.hindiLegalGuideMap else emptyMap()
+
+        return guides.map { g ->
+            val hi = hindiMap[g.id]
+            val cachedChecklist = cacheMap[g.id to "checklist"]
+                ?.split("\n")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() }
+            g.copy(
+                codeBadge = hi?.codeBadge ?: g.codeBadge,
+                title = hi?.title ?: cacheMap[g.id to "title"] ?: g.title,
+                summary = hi?.summary ?: cacheMap[g.id to "summary"] ?: g.summary,
+                actionChecklist = hi?.actionChecklist ?: cachedChecklist ?: g.actionChecklist,
+                statutoryCitation = hi?.statutoryCitation ?: g.statutoryCitation
+            )
         }
     }
 
@@ -596,7 +878,7 @@ class SurakshaViewModel(
                     id = upd.id,
                     caseId = seed.id,
                     dateLabel = upd.updateDateLabel,
-                    stageBadge = CaseStage.fromCode(upd.stageBadge).label,
+                    stageBadge = CaseStage.fromCode(upd.stageBadge).code,
                     headline = upd.headline,
                     details = upd.details,
                     sourceName = "User Logged Note (Awaiting Verification)",
@@ -628,7 +910,7 @@ class SurakshaViewModel(
                         id = upd.id,
                         caseId = offline.caseId,
                         dateLabel = upd.updateDateLabel,
-                        stageBadge = CaseStage.fromCode(upd.stageBadge).label,
+                        stageBadge = CaseStage.fromCode(upd.stageBadge).code,
                         headline = upd.headline,
                         details = upd.details,
                         sourceName = "User Logged Note",
@@ -667,7 +949,7 @@ class SurakshaViewModel(
                             id = "${offline.caseId}_init",
                             caseId = offline.caseId,
                             dateLabel = offline.incidentDateLabel,
-                            stageBadge = CaseStage.fromCode(offline.caseStageCode).label,
+                            stageBadge = CaseStage.fromCode(offline.caseStageCode).code,
                             headline = "Archived in Private Vault",
                             details = offline.summary,
                             sourceName = "Private Archive",
@@ -691,7 +973,7 @@ class SurakshaViewModel(
                         id = upd.id,
                         caseId = cloud.id,
                         dateLabel = upd.updateDateLabel,
-                        stageBadge = CaseStage.fromCode(upd.stageBadge).label,
+                        stageBadge = CaseStage.fromCode(upd.stageBadge).code,
                         headline = upd.headline,
                         details = upd.details,
                         sourceName = "User Logged Note",
@@ -750,9 +1032,9 @@ class SurakshaViewModel(
     private fun CaseDossier.toOfflineEntity(notes: String): SavedCaseOfflineEntity {
         return SavedCaseOfflineEntity(
             caseId = id,
-            title = title,
-            summary = summary,
-            fullReport = fullReport,
+            title = originalTitle.ifBlank { title },
+            summary = originalSummary.ifBlank { summary },
+            fullReport = originalFullReport.ifBlank { fullReport },
             stateName = stateName,
             districtName = districtName,
             cityName = cityName,

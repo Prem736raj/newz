@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,13 +29,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -72,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.data.model.HouseMeta
 import com.example.data.model.LokSabhaMpRecord
 import com.example.data.model.ParliamentHouse
@@ -79,8 +75,11 @@ import com.example.data.model.RajyaSabhaMpRecord
 import com.example.data.model.SelectedMpDetail
 import com.example.ui.viewmodel.MpsUiState
 
-private const val PUBLIC_SOURCES_FOOTER_TEXT =
-    "Data compiled from public sources. May not reflect the latest changes."
+@Composable
+private fun ParliamentHouse.localizedDisplayName(): String = when (this) {
+    ParliamentHouse.LOK_SABHA -> stringResource(R.string.mps_house_lok_sabha)
+    ParliamentHouse.RAJYA_SABHA -> stringResource(R.string.mps_house_rajya_sabha)
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -131,7 +130,7 @@ fun MpsOfIndiaScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Loading Members of Parliament directory…",
+                        text = stringResource(R.string.mps_loading_text),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -160,7 +159,7 @@ fun MpsOfIndiaScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Unable to load MP data",
+                            text = stringResource(R.string.mps_error_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onErrorContainer
@@ -204,7 +203,7 @@ fun MpsOfIndiaScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "MPs of India",
+                                text = stringResource(R.string.mps_title),
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground
@@ -214,7 +213,7 @@ fun MpsOfIndiaScreen(
                                 ParliamentHouse.RAJYA_SABHA -> uiState.rajyaSabhaMeta
                             }
                             Text(
-                                text = "Data as of ${activeMeta.formattedAsOfDate}",
+                                text = stringResource(R.string.mps_data_as_of, activeMeta.formattedAsOfDate),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.testTag("mps_as_of_date_label")
@@ -258,9 +257,9 @@ fun MpsOfIndiaScreen(
                         shape = RoundedCornerShape(12.dp),
                         placeholder = {
                             val hint = if (uiState.selectedHouse == ParliamentHouse.LOK_SABHA) {
-                                "Search MP, constituency, state, or party…"
+                                stringResource(R.string.mps_search_placeholder_lok)
                             } else {
-                                "Search MP, state, or party…"
+                                stringResource(R.string.mps_search_placeholder_rajya)
                             }
                             Text(
                                 text = hint,
@@ -272,7 +271,7 @@ fun MpsOfIndiaScreen(
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
-                                contentDescription = "Search MPs",
+                                contentDescription = stringResource(R.string.cd_search_mps),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
@@ -286,7 +285,7 @@ fun MpsOfIndiaScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear search query"
+                                        contentDescription = stringResource(R.string.cd_clear_search)
                                     )
                                 }
                             }
@@ -314,7 +313,7 @@ fun MpsOfIndiaScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.FilterList,
-                                contentDescription = "Filter by State or UT",
+                                contentDescription = stringResource(R.string.cd_filter_state_ut),
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -338,7 +337,7 @@ fun MpsOfIndiaScreen(
                                     .heightIn(min = 48.dp)
                                     .testTag("mps_reset_filters_button")
                             ) {
-                                Text("Reset")
+                                Text(stringResource(R.string.action_reset))
                             }
                         }
                     }
@@ -389,9 +388,17 @@ fun MpsOfIndiaScreen(
                     // Results summary line
                     val resultSummaryText = when (uiState.selectedHouse) {
                         ParliamentHouse.LOK_SABHA ->
-                            "Showing ${uiState.filteredLokSabhaMps.size} of ${uiState.lokSabhaMeta.totalSeats} Lok Sabha seats"
+                            stringResource(
+                                R.string.mps_showing_lok_format,
+                                uiState.filteredLokSabhaMps.size,
+                                uiState.lokSabhaMeta.totalSeats
+                            )
                         ParliamentHouse.RAJYA_SABHA ->
-                            "Showing ${uiState.totalFilteredRajyaSabhaCount} of ${uiState.rajyaSabhaMeta.sitting} sitting Rajya Sabha MPs"
+                            stringResource(
+                                R.string.mps_showing_rajya_format,
+                                uiState.totalFilteredRajyaSabhaCount,
+                                uiState.rajyaSabhaMeta.sitting
+                            )
                     }
                     Text(
                         text = resultSummaryText,
@@ -445,14 +452,24 @@ fun MpsOfIndiaScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        val localizedSectionName = if (sectionName.equals("Nominated", ignoreCase = true)) {
+                                            stringResource(R.string.mps_nominated)
+                                        } else {
+                                            sectionName
+                                        }
                                         Text(
-                                            text = sectionName,
+                                            text = localizedSectionName,
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                        val countText = if (members.size == 1) {
+                                            stringResource(R.string.mps_members_count_one, members.size)
+                                        } else {
+                                            stringResource(R.string.mps_members_count_other, members.size)
+                                        }
                                         Text(
-                                            text = "${members.size} ${if (members.size == 1) "member" else "members"}",
+                                            text = countText,
                                             style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -496,7 +513,7 @@ fun MpsOfIndiaScreen(
                     .testTag("mps_state_picker_sheet")
             ) {
                 Text(
-                    text = "Filter by State / UT",
+                    text = stringResource(R.string.mps_state_sheet_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
@@ -536,7 +553,7 @@ fun MpsOfIndiaScreen(
                             if (isSelected) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
+                                    contentDescription = stringResource(R.string.cd_selected),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -571,13 +588,16 @@ private fun HouseSummaryCard(
     } else {
         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     }
+    val houseTitle = house.localizedDisplayName()
+    val sittingVacantText = stringResource(R.string.mps_sitting_vacant_format, meta.sitting, meta.vacant)
+    val dataAsOfText = stringResource(R.string.mps_data_as_of, meta.formattedAsOfDate)
 
     Card(
         modifier = modifier
             .heightIn(min = 96.dp)
             .semantics {
                 role = Role.Tab
-                contentDescription = "${house.displayName}: ${meta.sitting} sitting, ${meta.vacant} vacant, data as of ${meta.formattedAsOfDate}"
+                contentDescription = "$houseTitle: $sittingVacantText, $dataAsOfText"
             }
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
@@ -597,7 +617,7 @@ private fun HouseSummaryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = house.displayName,
+                    text = houseTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = contentColor,
@@ -617,14 +637,14 @@ private fun HouseSummaryCard(
             }
 
             Text(
-                text = "${meta.sitting} Sitting · ${meta.vacant} Vacant",
+                text = sittingVacantText,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = contentColor
             )
 
             Text(
-                text = "Data as of ${meta.formattedAsOfDate}",
+                text = dataAsOfText,
                 style = MaterialTheme.typography.labelSmall,
                 color = if (selected) {
                     MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
@@ -645,6 +665,7 @@ private fun LokSabhaMpRowCard(
     modifier: Modifier = Modifier
 ) {
     val isVacant = record.isVacant
+    val vacantLabel = stringResource(R.string.mps_vacant_seat)
     Card(
         modifier = modifier
             .heightIn(min = 68.dp)
@@ -674,7 +695,7 @@ private fun LokSabhaMpRowCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = if (isVacant) "Vacant" else (record.mpName ?: "Vacant"),
+                    text = if (isVacant) vacantLabel else (record.mpName ?: vacantLabel),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (isVacant) FontWeight.Medium else FontWeight.SemiBold,
                     fontStyle = if (isVacant) FontStyle.Italic else FontStyle.Normal,
@@ -692,7 +713,7 @@ private fun LokSabhaMpRowCard(
             }
 
             PartyShortBadge(
-                partyShort = if (isVacant) "Vacant" else (record.partyShort ?: "IND"),
+                partyShort = if (isVacant) vacantLabel else (record.partyShort ?: "IND"),
                 isVacant = isVacant
             )
         }
@@ -705,6 +726,8 @@ private fun RajyaSabhaMpRowCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val unknownMpLabel = stringResource(R.string.mps_unknown_mp)
+    val termUnavailableLabel = stringResource(R.string.mps_term_unavailable)
     Card(
         modifier = modifier
             .heightIn(min = 68.dp)
@@ -730,12 +753,14 @@ private fun RajyaSabhaMpRowCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = record.mpName ?: "Unknown MP",
+                    text = record.mpName ?: unknownMpLabel,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                val termLabel = record.termEndYear?.let { "Term ends $it" } ?: "Term year unavailable"
+                val termLabel = record.termEndYear?.let {
+                    stringResource(R.string.mps_term_ends_format, it)
+                } ?: termUnavailableLabel
                 Text(
                     text = termLabel,
                     style = MaterialTheme.typography.bodyMedium,
@@ -852,14 +877,14 @@ private fun MpsEmptySearchState(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "No matching Members of Parliament",
+                text = stringResource(R.string.mps_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Try searching for another MP name, constituency, state, or party filter.",
+                text = stringResource(R.string.mps_empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -870,7 +895,7 @@ private fun MpsEmptySearchState(
                     .heightIn(min = 48.dp)
                     .testTag("mps_empty_reset_button")
             ) {
-                Text("Reset Search & Filters")
+                Text(stringResource(R.string.mps_empty_reset_btn))
             }
         }
     }
@@ -883,6 +908,12 @@ fun MpDetailScreen(
     modifier: Modifier = Modifier
 ) {
     BackHandler(onBack = onBack)
+
+    val vacantLabel = stringResource(R.string.mps_vacant_seat)
+    val vacantSeatDetailLabel = stringResource(R.string.mps_vacant_seat_detail)
+    val independentLabel = stringResource(R.string.mps_independent)
+    val lokSabhaLabel = stringResource(R.string.mps_house_lok_sabha)
+    val rajyaSabhaLabel = stringResource(R.string.mps_house_rajya_sabha)
 
     Column(
         modifier = modifier
@@ -905,12 +936,12 @@ fun MpDetailScreen(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back to MPs list"
+                    contentDescription = stringResource(R.string.cd_back_mps_list)
                 )
             }
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = "Member of Parliament Profile",
+                text = stringResource(R.string.mps_detail_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -946,7 +977,7 @@ fun MpDetailScreen(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = if (isVacant) "Vacant" else (record.mpName ?: "Vacant"),
+                                    text = if (isVacant) vacantLabel else (record.mpName ?: vacantLabel),
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
                                     fontStyle = if (isVacant) FontStyle.Italic else FontStyle.Normal,
@@ -958,13 +989,13 @@ fun MpDetailScreen(
                                     modifier = Modifier.testTag("mp_detail_name")
                                 )
                                 Text(
-                                    text = "Lok Sabha",
+                                    text = lokSabhaLabel,
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
                             PartyShortBadge(
-                                partyShort = if (isVacant) "Vacant" else (record.partyShort ?: "IND"),
+                                partyShort = if (isVacant) vacantLabel else (record.partyShort ?: "IND"),
                                 isVacant = isVacant
                             )
                         }
@@ -972,38 +1003,42 @@ fun MpDetailScreen(
                         HorizontalDivider()
 
                         DetailFieldRow(
-                            label = "House",
-                            value = detail.meta.house.ifBlank { "Lok Sabha" }
+                            label = stringResource(R.string.mps_detail_field_house),
+                            value = lokSabhaLabel
                         )
                         DetailFieldRow(
-                            label = "Constituency",
+                            label = stringResource(R.string.mps_detail_field_constituency),
                             value = if (record.constituencyNumber > 0) {
-                                "${record.constituencyName} (No. ${record.constituencyNumber})"
+                                stringResource(
+                                    R.string.mps_detail_constituency_no_format,
+                                    record.constituencyName,
+                                    record.constituencyNumber
+                                )
                             } else {
                                 record.constituencyName
                             }
                         )
                         DetailFieldRow(
-                            label = "State / UT",
+                            label = stringResource(R.string.mps_detail_field_state),
                             value = record.stateOrUt
                         )
                         if (!record.reservation.isNullOrBlank()) {
                             DetailFieldRow(
-                                label = "Reservation",
+                                label = stringResource(R.string.mps_detail_field_reservation),
                                 value = record.reservation
                             )
                         }
                         DetailFieldRow(
-                            label = "Party",
+                            label = stringResource(R.string.mps_detail_field_party),
                             value = if (isVacant) {
-                                "Vacant Seat"
+                                vacantSeatDetailLabel
                             } else {
-                                record.party ?: record.partyShort ?: "Independent"
+                                record.party ?: record.partyShort ?: independentLabel
                             }
                         )
                         if (!record.gender.isNullOrBlank()) {
                             DetailFieldRow(
-                                label = "Gender",
+                                label = stringResource(R.string.mps_detail_field_gender),
                                 value = record.gender
                             )
                         }
@@ -1022,7 +1057,11 @@ fun MpDetailScreen(
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = if (isVacant) "Reason for Vacancy" else "Notes",
+                                        text = if (isVacant) {
+                                            stringResource(R.string.mps_detail_reason_vacancy)
+                                        } else {
+                                            stringResource(R.string.mps_detail_notes)
+                                        },
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1065,14 +1104,14 @@ fun MpDetailScreen(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = record.mpName ?: "Unknown MP",
+                                    text = record.mpName ?: stringResource(R.string.mps_unknown_mp),
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.testTag("mp_detail_name")
                                 )
                                 Text(
-                                    text = "Rajya Sabha",
+                                    text = rajyaSabhaLabel,
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -1086,20 +1125,24 @@ fun MpDetailScreen(
                         HorizontalDivider()
 
                         DetailFieldRow(
-                            label = "House",
-                            value = detail.meta.house.ifBlank { "Rajya Sabha" }
+                            label = stringResource(R.string.mps_detail_field_house),
+                            value = rajyaSabhaLabel
                         )
                         DetailFieldRow(
-                            label = "State / UT",
-                            value = if (record.nominated) "Nominated" else record.stateOrUtRepresented
+                            label = stringResource(R.string.mps_detail_field_state),
+                            value = if (record.nominated) {
+                                stringResource(R.string.mps_nominated)
+                            } else {
+                                record.stateOrUtRepresented
+                            }
                         )
                         DetailFieldRow(
-                            label = "Party",
-                            value = record.party ?: record.partyShort ?: "Independent"
+                            label = stringResource(R.string.mps_detail_field_party),
+                            value = record.party ?: record.partyShort ?: independentLabel
                         )
                         if (record.termEndYear != null) {
                             DetailFieldRow(
-                                label = "Term End Year",
+                                label = stringResource(R.string.mps_detail_field_term_end),
                                 value = record.termEndYear.toString()
                             )
                         }
@@ -1118,7 +1161,7 @@ fun MpDetailScreen(
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = "Notes",
+                                        text = stringResource(R.string.mps_detail_notes),
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1172,7 +1215,7 @@ fun MpsDisclaimerFooter(
     modifier: Modifier = Modifier
 ) {
     Text(
-        text = PUBLIC_SOURCES_FOOTER_TEXT,
+        text = stringResource(R.string.mps_public_sources_footer),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,

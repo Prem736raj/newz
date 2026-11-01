@@ -14,16 +14,25 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.local.SurakshaArchiveSeedData
+import com.example.data.local.SurakshaHindiSeedTranslations
+import com.example.data.local.UserPreferencesRepository
+import com.example.data.model.AppLanguage
+import com.example.data.model.HouseMeta
+import com.example.data.model.ThemeMode
 import com.example.data.model.VerificationStatus
 import com.example.data.remote.IndianCrimeNewsRssClient
 import com.example.ui.screens.CaseDossierDetailScreen
 import com.example.ui.screens.DataAndSafetyScreen
 import com.example.ui.screens.FollowUpTrackerScreen
 import com.example.ui.screens.FrontPageCaseFeedScreen
+import com.example.ui.screens.MpsOfIndiaScreen
 import com.example.ui.screens.PermanentVaultScreen
 import com.example.ui.theme.SurakshaChronicleTheme
+import com.example.ui.viewmodel.MpsUiState
 import com.example.ui.viewmodel.SurakshaFilterState
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -382,6 +391,206 @@ class ExampleRobolectricTest {
         composeTestRule.waitForIdle()
         assertEquals("", filterState.searchQuery)
         composeTestRule.onNodeWithTag("dossier_card_case_ap_school_chainsaw_01").assertIsDisplayed()
+    }
+
+    @Test
+    fun `switching language to Hindi updates Home Track Saved Safety and MPs screens with no leftover English UI chrome`() {
+        val dossiers = SurakshaArchiveSeedData.buildInitialCaseDossiers()
+        val states = SurakshaArchiveSeedData.stateJurisdictions
+        val helplines = SurakshaArchiveSeedData.emergencyHelplines
+        val guides = SurakshaArchiveSeedData.legalRightsGuides
+
+        var activeLanguage by mutableStateOf(AppLanguage.ENGLISH)
+        var activeTab by mutableStateOf(0)
+
+        composeTestRule.setContent {
+            SurakshaChronicleTheme(appLanguage = activeLanguage) {
+                when (activeTab) {
+                    0 -> FrontPageCaseFeedScreen(
+                        dossiers = dossiers,
+                        savedCount = 1,
+                        states = states,
+                        filterState = SurakshaFilterState(),
+                        districts = emptyList(),
+                        cities = emptyList(),
+                        activeRepresentative = null,
+                        globalBlur = false,
+                        revealedIds = emptySet(),
+                        isRefreshingLive = false,
+                        onSelectState = {},
+                        onSelectDistrict = {},
+                        onSelectCity = {},
+                        onApplyLocation = { _, _, _ -> },
+                        onResetFilters = {},
+                        onSelectVictimGroup = {},
+                        onSelectCrimeCategory = {},
+                        onSearchQueryChange = {},
+                        onRefreshLive = {},
+                        onRevealBlur = {},
+                        onOpenDossier = {},
+                        onToggleSaveForLife = {},
+                        onToggleFollow = {},
+                        onAddFollowUp = { _, _, _, _, _ -> },
+                        onArchiveNewIncident = { _, _, _, _, _, _, _, _, _, _, _, _ -> }
+                    )
+                    1 -> FollowUpTrackerScreen(
+                        allDossiers = dossiers,
+                        states = states,
+                        filterState = SurakshaFilterState(),
+                        districts = emptyList(),
+                        cities = emptyList(),
+                        activeRepresentative = null,
+                        globalBlur = false,
+                        revealedIds = emptySet(),
+                        onSelectState = {},
+                        onSelectDistrict = {},
+                        onSelectCity = {},
+                        onRevealBlur = {},
+                        onOpenDossier = {},
+                        onToggleSaveForLife = {},
+                        onAddFollowUp = { _, _, _, _, _ -> },
+                        onQuickSelectJurisdiction = { _, _, _ -> }
+                    )
+                    2 -> PermanentVaultScreen(
+                        savedDossiers = dossiers.filter { it.isSavedForLife },
+                        followedDossiers = dossiers,
+                        states = states,
+                        globalBlur = false,
+                        revealedIds = emptySet(),
+                        onRevealBlur = {},
+                        onOpenDossier = {},
+                        onToggleSaveForLife = {},
+                        onAddFollowUp = { _, _, _, _, _ -> },
+                        onArchiveNewIncident = { _, _, _, _, _, _, _, _, _, _, _, _ -> },
+                        onQuickSelectJurisdiction = { _, _, _ -> }
+                    )
+                    3 -> DataAndSafetyScreen(
+                        states = states,
+                        helplines = helplines,
+                        legalGuides = guides,
+                        onSelectStateForFeed = {}
+                    )
+                    4 -> MpsOfIndiaScreen(
+                        uiState = MpsUiState(
+                            isLoading = false,
+                            lokSabhaMeta = HouseMeta(
+                                house = "Lok Sabha",
+                                asOfDate = "2025-05-01",
+                                totalSeats = 543,
+                                sitting = 541,
+                                vacant = 2
+                            ),
+                            rajyaSabhaMeta = HouseMeta(
+                                house = "Rajya Sabha",
+                                asOfDate = "2025-05-01",
+                                totalSeats = 245,
+                                sitting = 243,
+                                vacant = 2
+                            )
+                        ),
+                        onSelectHouse = {},
+                        onSearchQueryChange = {},
+                        onSelectState = {},
+                        onSelectParty = {},
+                        onResetFilters = {},
+                        onOpenLokSabhaMp = {},
+                        onOpenRajyaSabhaMp = {},
+                        onCloseMpDetail = {}
+                    )
+                }
+            }
+        }
+
+        // Start in English on Home
+        composeTestRule.onNodeWithText("Suraksha Chronicle").assertIsDisplayed()
+        composeTestRule.onNodeWithText("All India").assertIsDisplayed()
+
+        // Switch instantly to Hindi with no restart
+        activeLanguage = AppLanguage.HINDI
+        composeTestRule.waitForIdle()
+
+        // 0: Home Screen in Hindi
+        composeTestRule.onNodeWithText("सुरक्षा क्रॉनिकल").assertIsDisplayed()
+        composeTestRule.onNodeWithText("अखिल भारतीय").assertIsDisplayed()
+        composeTestRule.onNodeWithText("नवीनतम").assertIsDisplayed()
+        composeTestRule.onNodeWithText("All India").assertDoesNotExist()
+
+        // 1: Track Screen in Hindi
+        activeTab = 1
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("भूले नहीं जाएंगे • केस ट्रैकर").assertIsDisplayed()
+        composeTestRule.onNodeWithText("सभी मामले").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Never Forgotten • Case Tracker").assertDoesNotExist()
+
+        // 2: Saved Screen in Hindi
+        activeTab = 2
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("सहेजे गए और फ़ॉलो किए गए मामले").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Saved & Followed Cases").assertDoesNotExist()
+
+        // 3: Safety Screen in Hindi
+        activeTab = 3
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("सुरक्षा, हेल्पलाइन और कानूनी अधिकार").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Safety, Helplines & Legal Rights").assertDoesNotExist()
+
+        // 4: MPs of India Screen in Hindi
+        activeTab = 4
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("भारत के सांसद (MPs)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("लोकसभा").assertIsDisplayed()
+        composeTestRule.onNodeWithText("राज्यसभा").assertIsDisplayed()
+        composeTestRule.onNodeWithText("MPs of India").assertDoesNotExist()
+    }
+
+    @Test
+    fun `DataStore persists chosen language theme and font scale across recreation`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val repo1 = UserPreferencesRepository(context)
+        repo1.completeLanguageOnboarding(AppLanguage.HINDI)
+        repo1.setThemeMode(ThemeMode.DARK)
+        repo1.setFontScale(1.3f)
+
+        // Recreate repository instance and verify persisted values
+        val repo2 = UserPreferencesRepository(context)
+        val loaded = repo2.readInitialPreferencesBlocking()
+        assertEquals(AppLanguage.HINDI, loaded.appLanguage)
+        assertEquals(ThemeMode.DARK, loaded.themeMode)
+        assertEquals(1.3f, loaded.fontScale, 0.01f)
+        assertTrue(loaded.hasCompletedLanguageOnboarding)
+
+        // Reset back to English for other tests
+        repo2.setAppLanguage(AppLanguage.ENGLISH)
+        repo2.setThemeMode(ThemeMode.SYSTEM)
+        repo2.setFontScale(1.0f)
+    }
+
+    @Test
+    fun `verify bundled Devanagari fonts and complete Hindi seed translations`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        // Verify local TTF font resources exist and are loadable
+        val sansStream = context.resources.openRawResource(R.font.noto_sans_devanagari)
+        val sansBytes = sansStream.use { it.readBytes() }
+        assertTrue("Noto Sans Devanagari TTF should be non-empty (size=${sansBytes.size})", sansBytes.size > 1_000)
+
+        val serifStream = context.resources.openRawResource(R.font.noto_serif_devanagari)
+        val serifBytes = serifStream.use { it.readBytes() }
+        assertTrue("Noto Serif Devanagari TTF should be non-empty (size=${serifBytes.size})", serifBytes.size > 1_000)
+
+        // Verify all 7 seed cases, 20 timeline updates, 6 helplines, and 4 legal guides have Hindi translations
+        val seedEntries = SurakshaHindiSeedTranslations.buildSeedCacheEntities()
+        assertTrue("Hindi seed cache entries should cover all seed items", seedEntries.size >= 80)
+
+        val dossiers = SurakshaArchiveSeedData.buildInitialCaseDossiers()
+        val entryMap = seedEntries.associate { "${it.contentId}:${it.field}" to it.text }
+        dossiers.forEach { dossier ->
+            val hiTitle = entryMap["${dossier.id}:title"]
+            val hiSummary = entryMap["${dossier.id}:summary"]
+            assertNotNull("Missing Hindi title for ${dossier.id}", hiTitle)
+            assertNotNull("Missing Hindi summary for ${dossier.id}", hiSummary)
+            assertFalse("Hindi title should differ from English for ${dossier.id}", hiTitle == dossier.title)
+        }
     }
 
     private fun revealedCaseIdsEmpty(): Set<String> = emptySet()

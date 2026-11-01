@@ -4,8 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +36,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -181,7 +181,8 @@ fun signOutFromSuraksha(
 
 @Composable
 fun SurakshaAuthScreen(
-    onAuthSuccess: () -> Unit
+    onAuthSuccess: () -> Unit,
+    onContinueAsGuest: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -227,13 +228,13 @@ fun SurakshaAuthScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Shield,
-                            contentDescription = "Editorial Shield",
+                            contentDescription = stringResource(R.string.cd_editorial_shield),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "PUBLIC INTEREST JOURNALISM & CASE ARCHIVE",
+                            text = stringResource(R.string.auth_investigative_desk),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             fontWeight = FontWeight.SemiBold
@@ -244,7 +245,7 @@ fun SurakshaAuthScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Suraksha Chronicle",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center
@@ -253,7 +254,7 @@ fun SurakshaAuthScreen(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Beyond the headline. Follow the facts.",
+                    text = stringResource(R.string.app_tagline),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
@@ -263,7 +264,7 @@ fun SurakshaAuthScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "An India-focused journalism and case-follow-up platform covering safety issues, investigations, and court proceedings affecting women, girls, and teenagers.",
+                    text = stringResource(R.string.auth_platform_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -275,20 +276,20 @@ fun SurakshaAuthScreen(
 
                 AuthPillarRow(
                     icon = Icons.Default.Newspaper,
-                    title = "Verified News & Regional Filtering",
-                    desc = "Read factual reports across India or filter by State, District, and City."
+                    title = stringResource(R.string.auth_feature_news_title),
+                    desc = stringResource(R.string.auth_feature_news_desc)
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 AuthPillarRow(
                     icon = Icons.Default.HistoryEdu,
-                    title = "Never Forgotten Case Tracker",
-                    desc = "Follow FIRs, chargesheets, court hearings, and confirmed judicial developments beyond the original news cycle."
+                    title = stringResource(R.string.auth_feature_timelines_title),
+                    desc = stringResource(R.string.auth_feature_timelines_desc)
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 AuthPillarRow(
                     icon = Icons.Default.BookmarkAdded,
-                    title = "Personal Archive & Emergency Support",
-                    desc = "Save cases for offline reading with private notes and access verified national helplines and legal guides."
+                    title = stringResource(R.string.auth_feature_helplines_title),
+                    desc = stringResource(R.string.auth_feature_helplines_desc)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -352,7 +353,7 @@ fun SurakshaAuthScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Signing in...",
+                            text = stringResource(R.string.auth_connecting_google),
                             style = MaterialTheme.typography.labelLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -360,14 +361,33 @@ fun SurakshaAuthScreen(
                     } else {
                         Icon(
                             imageVector = Icons.Default.Lock,
-                            contentDescription = "Sign in with Google",
+                            contentDescription = stringResource(R.string.cd_sign_in_google),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Continue with Google",
+                            text = stringResource(R.string.auth_sign_in_google),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                if (onContinueAsGuest != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = onContinueAsGuest,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .testTag("continue_as_guest_button"),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.auth_continue_guest),
+                            style = MaterialTheme.typography.labelLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
