@@ -511,6 +511,13 @@ object SurakshaArchiveSeedData {
         )
     )
 
+    /**
+     * Nothing in the bundled example case narratives has a complete, reviewed
+     * claim-by-claim evidence ledger. Do not publish them as real case records.
+     * Retain the examples exclusively for tests/editorial reconciliation.
+     */
+    fun buildPublishedCaseDossiers(): List<CaseDossier> = emptyList()
+
     fun buildInitialCaseDossiers(): List<CaseDossier> = listOf(
         CaseDossier(
             id = "case_ap_school_chainsaw_01",
