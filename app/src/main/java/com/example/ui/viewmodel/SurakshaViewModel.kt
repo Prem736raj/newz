@@ -437,7 +437,10 @@ class SurakshaViewModel(
         return districtObj.cities.find { it.cityName.equals(cityName, ignoreCase = true) }
     }
 
+    private var latestRssRequestId = 0L
+
     fun refreshLiveIndianNews(stateOverride: String? = null) {
+        val requestId = ++latestRssRequestId
         val targetState = stateOverride ?: _filterState.value.selectedState
         val activeLang = _appLanguage.value
         viewModelScope.launch {
@@ -448,6 +451,8 @@ class SurakshaViewModel(
                     stateQuery = targetState,
                     language = activeLang
                 )
+                // A late reply for State A must not overwrite newer State B results.
+                if (requestId != latestRssRequestId) return@launch
                 if (live.isNotEmpty()) {
                     _liveRssDossiers.value = live
                     if (activeLang != AppLanguage.ENGLISH) {
@@ -461,9 +466,11 @@ class SurakshaViewModel(
                         "Unable to refresh. Showing previously available reports; verification status varies."
                 }
             } catch (e: Exception) {
-                _feedSyncNote.value = "Unable to refresh. Showing previously available reports; verification status varies."
+                if (requestId == latestRssRequestId) {
+                    _feedSyncNote.value = "Unable to refresh. Showing previously available reports; verification status varies."
+                }
             } finally {
-                _isRefreshingLive.value = false
+                if (requestId == latestRssRequestId) _isRefreshingLive.value = false
             }
         }
     }
