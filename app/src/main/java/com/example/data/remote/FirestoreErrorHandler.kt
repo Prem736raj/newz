@@ -2,7 +2,7 @@ package com.example.data.remote
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
-import org.json.JSONArray
+import com.google.firebase.firestore.FirebaseFirestoreException
 import org.json.JSONObject
 
 enum class OperationType(val value: String) {
@@ -14,33 +14,25 @@ enum class OperationType(val value: String) {
     WRITE("write"),
 }
 
+/**
+ * Diagnostics intentionally exclude UIDs, emails, document IDs, report contents
+ * and exception messages: those can all contain private user information.
+ * An error category is enough for production troubleshooting.
+ */
 fun handleFirestoreError(exception: Exception, operationType: OperationType, path: String?): String {
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
-
-    val providerInfoList = currentUser?.providerData?.map { provider ->
-        JSONObject().apply {
-            put("providerId", provider.providerId)
-            put("email", provider.email)
-        }
-    } ?: emptyList()
-
-    val authInfoJson = JSONObject().apply {
-        put("userId", currentUser?.uid)
-        put("email", currentUser?.email)
-        put("emailVerified", currentUser?.isEmailVerified)
-        put("tenantId", currentUser?.tenantId)
-        put("providerInfo", JSONArray(providerInfoList))
+    val operationArea = when {
+        path?.contains("/saved_cases/") == true -> "saved_cases"
+        path?.contains("/case_updates/") == true -> "case_updates"
+        else -> "unspecified"
     }
-
     val errorInfoJson = JSONObject().apply {
-        put("error", exception.message ?: exception.toString())
         put("operationType", operationType.value)
-        put("path", path)
-        put("authInfo", authInfoJson)
+        put("operationArea", operationArea)
+        put("errorClass", exception.javaClass.simpleName)
+        put("firestoreCode", (exception as? FirebaseFirestoreException)?.code?.name ?: "UNKNOWN")
+        put("authenticated", FirebaseAuth.getInstance().currentUser != null)
     }
-
-    val jsonString = errorInfoJson.toString()
-    Log.e("FirestoreError", "Firestore Error: $jsonString")
-    return jsonString
+    val safeJson = errorInfoJson.toString()
+    Log.e("FirestoreError", "Firestore operation failed: $safeJson")
+    return safeJson
 }
