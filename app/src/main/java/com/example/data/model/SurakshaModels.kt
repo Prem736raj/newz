@@ -289,10 +289,10 @@ data class TimelineUpdateItem(
     val verificationStatus: VerificationStatus = if (isUserAdded) {
         VerificationStatus.AWAITING_VERIFICATION
     } else {
-        VerificationStatus.CONFIRMED
+        VerificationStatus.AWAITING_VERIFICATION
     },
-    val sourceReferenceUrl: String = "https://ecourts.gov.in/",
-    val lastCheckedDate: String = "Verified Oct 2026",
+    val sourceReferenceUrl: String = "",
+    val lastCheckedDate: String = "Not independently verified",
     val isMachineTranslated: Boolean = false,
     val originalHeadline: String = headline,
     val originalDetails: String = details
@@ -322,7 +322,7 @@ data class CaseDossier(
     val triggerWarning: String,
     val relevantLaws: List<String>,
     val sourceName: String,
-    val sourceUrl: String = "https://ncw.nic.in/",
+    val sourceUrl: String = "",
     val timelineUpdates: List<TimelineUpdateItem> = emptyList(),
     val isSavedForLife: Boolean = false,
     val isFollowed: Boolean = false,
@@ -331,14 +331,15 @@ data class CaseDossier(
     val verificationStatus: VerificationStatus = if (isLiveRss) {
         VerificationStatus.REPORTED_UNCONFIRMED
     } else {
-        VerificationStatus.CONFIRMED
+        VerificationStatus.AWAITING_VERIFICATION
     },
-    val lastVerifiedDate: String = "Oct 2026",
-    val representativeDataSource: String = "Election Commission of India (ECI) Official Affidavit & Secretariat Roll",
+    val lastVerifiedDate: String = "Not independently verified",
+    val representativeDataSource: String = "Representative data not independently verified",
     val isMachineTranslated: Boolean = false,
     val originalTitle: String = title,
     val originalSummary: String = summary,
-    val originalFullReport: String = fullReport
+    val originalFullReport: String = fullReport,
+    val publishedAtEpochMillis: Long? = null
 ) {
     val daysSinceIncident: Int
         get() {
