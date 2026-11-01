@@ -19,8 +19,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Use the Android SDK preinstalled on Ubuntu runner
+        run: |
+          sdkmanager --version
+          yes | sdkmanager --licenses > /dev/null || true
       - name: Install SDK packages used by current AGP configuration
         run: |
           sdkmanager --install 'platforms;android-36' 'platforms;android-36.1' 'build-tools;36.0.0'
