@@ -1,9 +1,11 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +79,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -95,6 +105,8 @@ import com.example.data.model.SensitivityLevel
 import com.example.data.model.StateJurisdiction
 import com.example.data.model.TimelineUpdateItem
 import com.example.data.model.VerificationStatus
+import com.example.ui.theme.EditorialSandBackdrop
+import com.example.ui.theme.EditorialSunCircle
 import com.example.ui.theme.SuccessIndicator
 import com.example.ui.theme.WarningIndicator
 
@@ -1580,7 +1592,7 @@ fun CaseChronologicalTimelineList(
                     .height(IntrinsicSize.Min)
                     .testTag("timeline_node_${caseId}_$index")
             ) {
-                // Vertical Timeline Spine & Milestone Dot
+                // Vertical Timeline Spine & Numbered Milestone Node (matching 04_civic_timeline.png)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
@@ -1588,25 +1600,42 @@ fun CaseChronologicalTimelineList(
                         .fillMaxHeight()
                 ) {
                     Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .padding(top = 6.dp)
-                            .size(if (isLatest) 12.dp else 9.dp)
+                            .padding(top = 2.dp)
+                            .size(28.dp)
                             .clip(CircleShape)
                             .background(
                                 if (isLatest) {
-                                    MaterialTheme.colorScheme.primary
+                                    MaterialTheme.colorScheme.secondary
                                 } else {
-                                    MaterialTheme.colorScheme.outline
+                                    MaterialTheme.colorScheme.secondaryContainer
                                 }
                             )
-                    )
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.secondary,
+                                shape = CircleShape
+                            )
+                    ) {
+                        Text(
+                            text = "${index + 1}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLatest) {
+                                MaterialTheme.colorScheme.onSecondary
+                            } else {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            }
+                        )
+                    }
                     if (index < timelineUpdates.lastIndex) {
                         Box(
                             modifier = Modifier
                                 .width(2.dp)
                                 .weight(1f)
                                 .padding(vertical = 2.dp)
-                                .background(MaterialTheme.colorScheme.outlineVariant)
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f))
                         )
                     }
                 }
@@ -1720,3 +1749,118 @@ fun CaseStageProgressStrip(
         }
     }
 }
+
+/**
+ * Custom architectural Courthouse & Sun vector illustration matching
+ * 01_editorial_home.png, 02_editorial_story.png, and 07_night_home.png.
+ */
+@Composable
+fun EditorialCourthouseIllustration(
+    badgeText: String,
+    modifier: Modifier = Modifier
+) {
+    val isDark = isSystemInDarkTheme()
+    val backdropColor = if (isDark) Color(0xFF283542) else EditorialSandBackdrop
+    val sunColor = if (isDark) Color(0xFFE2B168).copy(alpha = 0.22f) else EditorialSunCircle
+    val structureColor = if (isDark) Color(0xFFF4EFE6) else Color(0xFF1F2A36)
+    val pillarColor = if (isDark) Color(0xFFE2B168).copy(alpha = 0.55f) else Color(0xFFF8E5D8)
+    val gridLineColor = structureColor.copy(alpha = 0.14f)
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(176.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(backdropColor)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
+            .testTag("editorial_courthouse_illustration")
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            // Soft sun circle on the top-right
+            drawCircle(
+                color = sunColor,
+                radius = h * 0.62f,
+                center = Offset(w * 0.82f, h * 0.34f)
+            )
+
+            // Subtle architectural vertical grid lines
+            val cols = 7
+            for (i in 1..cols) {
+                val x = w * (i.toFloat() / (cols + 1))
+                drawLine(
+                    color = gridLineColor,
+                    start = Offset(x, h * 0.22f),
+                    end = Offset(x, h * 0.90f),
+                    strokeWidth = 2f
+                )
+            }
+
+            // Courthouse Pediment (triangular roof)
+            val roofPath = Path().apply {
+                moveTo(w * 0.22f, h * 0.40f)
+                lineTo(w * 0.50f, h * 0.14f)
+                lineTo(w * 0.78f, h * 0.40f)
+            }
+            drawPath(
+                path = roofPath,
+                color = structureColor,
+                style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            )
+
+            // Upper entablature beam
+            drawRoundRect(
+                color = structureColor,
+                topLeft = Offset(w * 0.24f, h * 0.42f),
+                size = Size(w * 0.52f, h * 0.06f),
+                cornerRadius = CornerRadius(6f, 6f)
+            )
+
+            // 4 Courthouse Columns
+            val pillarPositions = listOf(0.29f, 0.41f, 0.53f, 0.65f)
+            pillarPositions.forEach { frac ->
+                drawRoundRect(
+                    color = pillarColor,
+                    topLeft = Offset(w * frac, h * 0.49f),
+                    size = Size(w * 0.055f, h * 0.22f),
+                    cornerRadius = CornerRadius(4f, 4f)
+                )
+            }
+
+            // Two-stepped Courthouse Plinth Base
+            drawRoundRect(
+                color = structureColor,
+                topLeft = Offset(w * 0.21f, h * 0.71f),
+                size = Size(w * 0.58f, h * 0.07f),
+                cornerRadius = CornerRadius(6f, 6f)
+            )
+            drawRoundRect(
+                color = structureColor,
+                topLeft = Offset(w * 0.18f, h * 0.77f),
+                size = Size(w * 0.64f, h * 0.05f),
+                cornerRadius = CornerRadius(6f, 6f)
+            )
+        }
+
+        if (badgeText.isNotBlank()) {
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = badgeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+        }
+    }
+}
+

@@ -108,7 +108,7 @@
     },
     "CaseFollowUp": {
       "title": "CaseFollowUp",
-      "description": "A chronological follow-up update logged by an authenticated user to track progress on a saved case 1 month, 2 months, or longer after the initial crime.",
+      "description": "A chronological follow-up update logged by an authenticated user in their personal archive to track progress on a saved case.",
       "type": "object",
       "properties": {
         "userId": {
@@ -161,6 +161,52 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "CorrectionRequest": {
+      "title": "CorrectionRequest",
+      "description": "A durable editorial correction, court-order link submission, or child/survivor privacy redaction request submitted by a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the authenticated user submitting the correction or takedown request."
+        },
+        "caseId": {
+          "type": "string",
+          "description": "ID of the story or case dossier being flagged."
+        },
+        "issueType": {
+          "type": "string",
+          "description": "Category of issue (e.g., Factual Correction, Privacy / Minor Identity Protection, Updated Court / Police Order)."
+        },
+        "details": {
+          "type": "string",
+          "description": "Description of the inaccuracy, privacy redaction request, or official primary source link."
+        },
+        "status": {
+          "type": "string",
+          "description": "Moderation status ('SUBMITTED_PENDING_REVIEW')."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the request was submitted."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the request was last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "caseId",
+        "issueType",
+        "details",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -168,19 +214,25 @@
       "schema": {
         "$ref": "#/entities/SavedCase"
       },
-      "description": "Per-user permanent 'Save for Life' archive of crime dossiers and user-logged incidents."
+      "description": "Per-user private 'Save for Life' archive of crime dossiers and private notes."
     },
     "/users/{userId}/case_updates/{updateId}": {
       "schema": {
         "$ref": "#/entities/CaseFollowUp"
       },
-      "description": "Per-user chronological follow-up updates tracking long-term justice outcomes for archived cases."
+      "description": "Per-user chronological follow-up notes tracking long-term outcomes for archived cases."
+    },
+    "/users/{userId}/correction_requests/{requestId}": {
+      "schema": {
+        "$ref": "#/entities/CorrectionRequest"
+      },
+      "description": "Durable queue of user-submitted factual corrections and privacy/redaction requests."
     },
     "/public_dispatches/{caseId}": {
       "schema": {
         "$ref": "#/entities/SavedCase"
       },
-      "description": "Publicly broadcast crime & safety dispatches with verified https:// photo and video URLs visible in real time across all users' devices."
+      "description": "Read-only server/editor-moderated public dispatches. Direct client writes are prohibited."
     }
   }
 }

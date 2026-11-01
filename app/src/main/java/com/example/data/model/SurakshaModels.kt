@@ -14,6 +14,7 @@ enum class CaseStage(
     @StringRes val labelRes: Int,
     val stepIndex: Int
 ) {
+    UNKNOWN("UNKNOWN", R.string.stage_not_verified, 0),
     FIR_FILED("FIR_FILED", R.string.stage_fir_filed, 1),
     ACCUSED_ARRESTED("ACCUSED_ARRESTED", R.string.stage_arrest_made, 2),
     CHARGESHEET_FILED("CHARGESHEET_FILED", R.string.stage_chargesheet_filed, 3),
@@ -22,8 +23,9 @@ enum class CaseStage(
     JUSTICE_PENDING("JUSTICE_PENDING", R.string.stage_under_investigation, 2);
 
     companion object {
-        fun fromCode(code: String): CaseStage {
-            return entries.find { it.code.equals(code, ignoreCase = true) } ?: FIR_FILED
+        fun fromCode(code: String?): CaseStage {
+            if (code.isNullOrBlank()) return UNKNOWN
+            return entries.find { it.code.equals(code.trim(), ignoreCase = true) } ?: UNKNOWN
         }
     }
 }
@@ -34,6 +36,54 @@ enum class VerificationStatus(@StringRes val labelRes: Int) {
     AWAITING_VERIFICATION(R.string.verification_developing),
     CORRECTED(R.string.verification_multi_source)
 }
+
+enum class SourceType(val displayLabel: String) {
+    PRIMARY_COURT_ORDER("Official Court Order / Judgment"),
+    POLICE_BULLETIN("Police Press Note / FIR Record"),
+    REPUTABLE_PUBLISHER("Verified News Publisher"),
+    SYNDICATED_RSS("Syndicated News Feed (Unverified)"),
+    USER_NOTE_UNVERIFIED("Private User Note (Unverified)")
+}
+
+enum class EvidenceVerificationLevel(val displayLabel: String) {
+    OFFICIAL_DOCUMENT_CONFIRMED("Official Document Confirmed"),
+    REPORTED_BY_PUBLISHER("Reported by Publisher"),
+    DISPUTED("Disputed / Under Review"),
+    CORRECTED("Corrected Record"),
+    UNKNOWN_UNVERIFIED("Not Confirmed Yet")
+}
+
+data class StorySource(
+    val id: String,
+    val publisherName: String,
+    val originalUrl: String,
+    val canonicalUrl: String = originalUrl,
+    val publishedAtLabel: String,
+    val sourceType: SourceType = SourceType.REPUTABLE_PUBLISHER,
+    val verificationLevel: EvidenceVerificationLevel = EvidenceVerificationLevel.REPORTED_BY_PUBLISHER
+)
+
+data class CourtEvent(
+    val id: String,
+    val storyId: String,
+    val courtName: String,
+    val caseReference: String = "Not publicly indexed / Protected",
+    val eventType: String,
+    val eventDateLabel: String,
+    val verificationLevel: EvidenceVerificationLevel,
+    val officialDocumentUrl: String? = null,
+    val sourceTitle: String,
+    val checkedAtLabel: String,
+    val reviewedBy: String = "Suraksha Editorial Desk"
+)
+
+data class EditorialReview(
+    val reviewStatus: EvidenceVerificationLevel,
+    val reviewedBy: String,
+    val reviewedAtLabel: String,
+    val childIdentityRedactionVerified: Boolean,
+    val notes: String
+)
 
 enum class SensitivityLevel(@StringRes val labelRes: Int) {
     HIGH_DISTURBANCE(R.string.sensitivity_minor_protected),
@@ -213,6 +263,28 @@ data class TranslationCacheEntity(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Entity(tableName = "correction_requests_offline")
+data class CorrectionRequestEntity(
+    @PrimaryKey val requestId: String,
+    val caseId: String,
+    val issueType: String,
+    val details: String,
+    val status: String = "SUBMITTED_PENDING_REVIEW",
+    val createdAtMillis: Long = System.currentTimeMillis()
+)
+
+@IgnoreExtraProperties
+data class CorrectionRequest(
+    @DocumentId val id: String = "",
+    val userId: String = "",
+    val caseId: String = "",
+    val issueType: String = "",
+    val details: String = "",
+    val status: String = "SUBMITTED_PENDING_REVIEW",
+    @ServerTimestamp val createdAt: Timestamp? = null,
+    @ServerTimestamp val updatedAt: Timestamp? = null
+)
+
 enum class MediaAttachmentType {
     IMAGE,
     VIDEO
@@ -244,7 +316,7 @@ data class SavedCase(
     val mpName: String = "",
     val victimCategory: String = "",
     val crimeCategory: String = "",
-    val caseStage: String = "FIR_FILED",
+    val caseStage: String = "UNKNOWN",
     val incidentDateLabel: String = "",
     val personalNotes: String? = null,
     val imageUrl: String = "",
@@ -314,8 +386,8 @@ data class TimelineUpdateItem(
     } else {
         VerificationStatus.CONFIRMED
     },
-    val sourceReferenceUrl: String = "https://ecourts.gov.in/",
-    val lastCheckedDate: String = "Verified Oct 2026",
+    val sourceReferenceUrl: String = "",
+    val lastCheckedDate: String = if (isUserAdded) "Pending verification" else "Documented record",
     val isMachineTranslated: Boolean = false,
     val originalHeadline: String = headline,
     val originalDetails: String = details
@@ -345,7 +417,7 @@ data class CaseDossier(
     val triggerWarning: String,
     val relevantLaws: List<String>,
     val sourceName: String,
-    val sourceUrl: String = "https://ncw.nic.in/",
+    val sourceUrl: String = "",
     val timelineUpdates: List<TimelineUpdateItem> = emptyList(),
     val isSavedForLife: Boolean = false,
     val isFollowed: Boolean = false,
@@ -356,7 +428,7 @@ data class CaseDossier(
     } else {
         VerificationStatus.CONFIRMED
     },
-    val lastVerifiedDate: String = "Oct 2026",
+    val lastVerifiedDate: String = if (isLiveRss) "Not independently verified" else "Editorial Archive",
     val representativeDataSource: String = "Election Commission of India (ECI) Official Affidavit & Secretariat Roll",
     val isMachineTranslated: Boolean = false,
     val originalTitle: String = title,
@@ -365,7 +437,69 @@ data class CaseDossier(
     val imageUrl: String = "",
     val videoUrl: String = "",
     val mediaCaption: String = "",
-    val mediaAttachments: List<CaseMediaAttachment> = emptyList()
+    val mediaAttachments: List<CaseMediaAttachment> = emptyList(),
+    val whatWasReported: String = summary,
+    val whatIsConfirmed: String = if (verificationStatus == VerificationStatus.CONFIRMED && !isLiveRss) {
+        fullReport.lines().firstOrNull { it.isNotBlank() } ?: summary
+    } else {
+        "Not independently confirmed yet. No primary police FIR or court order has been linked to this report."
+    },
+    val whatCourtDid: String = when {
+        caseStage == CaseStage.UNKNOWN || isLiveRss ->
+            "Not confirmed yet. We will not guess the next stage without a verified court order or case filing."
+        timelineUpdates.isNotEmpty() ->
+            timelineUpdates.last().details
+        else ->
+            "No court order or judicial hearing document linked yet."
+    },
+    val whatRemainsUnknown: String = if (caseStage == CaseStage.UNKNOWN || isLiveRss) {
+        "Official FIR registration number, chargesheet status, and court hearing schedule remain unverified."
+    } else {
+        "Next scheduled trial hearing date and final judicial verdict remain pending before the court."
+    },
+    val sources: List<StorySource> = listOf(
+        StorySource(
+            id = "${id}_src_primary",
+            publisherName = sourceName,
+            originalUrl = sourceUrl,
+            canonicalUrl = sourceUrl,
+            publishedAtLabel = incidentDateLabel,
+            sourceType = if (isLiveRss) SourceType.SYNDICATED_RSS else SourceType.REPUTABLE_PUBLISHER,
+            verificationLevel = if (verificationStatus == VerificationStatus.CONFIRMED && !isLiveRss) {
+                EvidenceVerificationLevel.OFFICIAL_DOCUMENT_CONFIRMED
+            } else {
+                EvidenceVerificationLevel.REPORTED_BY_PUBLISHER
+            }
+        )
+    ),
+    val courtEvents: List<CourtEvent> = timelineUpdates.map { item ->
+        CourtEvent(
+            id = item.id,
+            storyId = id,
+            courtName = policeJurisdiction,
+            eventType = item.stageBadge,
+            eventDateLabel = item.dateLabel,
+            verificationLevel = if (item.verificationStatus == VerificationStatus.CONFIRMED && !item.isUserAdded) {
+                EvidenceVerificationLevel.OFFICIAL_DOCUMENT_CONFIRMED
+            } else {
+                EvidenceVerificationLevel.UNKNOWN_UNVERIFIED
+            },
+            officialDocumentUrl = item.sourceReferenceUrl.takeIf { it.isNotBlank() },
+            sourceTitle = item.sourceName,
+            checkedAtLabel = item.lastCheckedDate
+        )
+    },
+    val editorialReview: EditorialReview = EditorialReview(
+        reviewStatus = if (verificationStatus == VerificationStatus.CONFIRMED && !isLiveRss) {
+            EvidenceVerificationLevel.OFFICIAL_DOCUMENT_CONFIRMED
+        } else {
+            EvidenceVerificationLevel.UNKNOWN_UNVERIFIED
+        },
+        reviewedBy = if (isLiveRss) "Automated Feed (Unreviewed)" else "Suraksha Editorial Desk",
+        reviewedAtLabel = lastVerifiedDate,
+        childIdentityRedactionVerified = !isLiveRss,
+        notes = triggerWarning
+    )
 ) {
     val daysSinceIncident: Int
         get() {
@@ -417,5 +551,8 @@ data class LegalRightGuide(
     val title: String,
     val summary: String,
     val actionChecklist: List<String>,
-    val statutoryCitation: String
+    val statutoryCitation: String,
+    val lastReviewedDate: String = "Reviewed Nov 2026",
+    val jurisdictionLabel: String = "All India (BNS / BNSS / POCSO)",
+    val officialReferenceUrl: String = "https://www.indiacode.nic.in/"
 )

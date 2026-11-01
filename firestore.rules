@@ -57,6 +57,20 @@ service cloud.firestore {
              data.updatedAt is timestamp && data.updatedAt <= request.time;
     }
 
+    function isVerifiedEditor() {
+      return isSignedIn() && request.auth.token.editor == true;
+    }
+
+    function isValidCorrectionRequest(data) {
+      return data.userId is string && data.userId == request.auth.uid && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.caseId is string && data.caseId.size() >= 1 && data.caseId.size() <= 128 &&
+             data.issueType is string && data.issueType.size() >= 2 && data.issueType.size() <= 100 &&
+             data.details is string && data.details.size() >= 3 && data.details.size() <= 5000 &&
+             data.status is string && data.status in ['PENDING_EDITORIAL_REVIEW', 'SUBMITTED_PENDING_REVIEW'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
     match /users/{userId}/saved_cases/{caseId} {
       allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(caseId);
       allow list: if isSignedIn() && request.auth.uid == userId;
@@ -100,14 +114,18 @@ service cloud.firestore {
       allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(caseId);
     }
 
+    // P0 Security Gate: Regular clients CANNOT directly publish to /public_dispatches.
+    // Only server-side admin SDK or accounts with custom token 'editor == true' can publish,
+    // and 'personalNotes' is strictly forbidden in public records.
     match /public_dispatches/{caseId} {
-      allow get: if isSignedIn() && isValidId(caseId);
+      allow get: if isSignedIn() && isValidId(caseId) && existing().visibility == 'PUBLIC';
       allow list: if isSignedIn() && resource.data.visibility == 'PUBLIC';
 
-      allow create: if isSignedIn() &&
+      allow create: if isVerifiedEditor() &&
                        isValidId(caseId) &&
                        incoming().userId == request.auth.uid &&
                        incoming().visibility == 'PUBLIC' &&
+                       !('personalNotes' in incoming()) &&
                        incoming().keys().hasAll([
                          'userId', 'title', 'summary', 'fullReport',
                          'stateName', 'districtName', 'cityName',
@@ -118,29 +136,30 @@ service cloud.firestore {
                          'userId', 'title', 'summary', 'fullReport',
                          'stateName', 'districtName', 'cityName',
                          'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
-                         'caseStage', 'incidentDateLabel', 'personalNotes',
+                         'caseStage', 'incidentDateLabel',
                          'imageUrl', 'videoUrl', 'mediaCaption', 'visibility',
                          'createdAt', 'updatedAt'
                        ]) &&
                        isValidSavedCase(incoming());
 
-      allow update: if isSignedIn() &&
+      allow update: if isVerifiedEditor() &&
                        isValidId(caseId) &&
                        existing().userId == request.auth.uid &&
                        incoming().userId == existing().userId &&
                        incoming().createdAt == existing().createdAt &&
                        incoming().visibility == 'PUBLIC' &&
+                       !('personalNotes' in incoming()) &&
                        isValidSavedCase(incoming()) &&
                        incoming().diff(existing()).affectedKeys().hasOnly([
                          'title', 'summary', 'fullReport',
                          'stateName', 'districtName', 'cityName',
                          'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
-                         'caseStage', 'incidentDateLabel', 'personalNotes',
+                         'caseStage', 'incidentDateLabel',
                          'imageUrl', 'videoUrl', 'mediaCaption', 'visibility',
                          'updatedAt'
                        ]);
 
-      allow delete: if isSignedIn() && isValidId(caseId) && existing().userId == request.auth.uid;
+      allow delete: if isVerifiedEditor() && isValidId(caseId);
     }
 
     match /users/{userId}/case_updates/{updateId} {
@@ -175,6 +194,26 @@ service cloud.firestore {
                        ]);
 
       allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(updateId);
+    }
+
+    match /users/{userId}/correction_requests/{requestId} {
+      allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(requestId);
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(requestId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'caseId', 'issueType', 'details', 'status', 'createdAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'caseId', 'issueType', 'details', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidCorrectionRequest(incoming());
+
+      allow update: if false;
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(requestId);
     }
   }
 }

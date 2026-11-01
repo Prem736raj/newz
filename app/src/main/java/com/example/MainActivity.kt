@@ -432,7 +432,8 @@ fun SurakshaAuthenticatedShell(
                     currentUserId = currentUserId,
                     userPreferencesRepository = prefsRepo,
                     translationCacheDao = translationDao,
-                    translationService = SurakshaTranslationService(translationDao)
+                    translationService = SurakshaTranslationService(translationDao),
+                    correctionRequestDao = roomDb.correctionRequestDao()
                 )
             }
         }
@@ -596,6 +597,30 @@ fun SurakshaAuthenticatedShell(
                         if (currentTab != 0) currentTab = 0
                     },
                     extraActions = {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .clickable {
+                                    val nextLang = if (appLanguage == AppLanguage.ENGLISH) {
+                                        AppLanguage.HINDI
+                                    } else {
+                                        AppLanguage.ENGLISH
+                                    }
+                                    viewModel.setAppLanguage(nextLang)
+                                }
+                                .testTag("quick_language_toggle_pill")
+                        ) {
+                            Text(
+                                text = stringResource(R.string.editorial_lang_toggle_pill),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+
                         IconButton(
                             onClick = { showNotificationsDialog = true },
                             modifier = Modifier
@@ -957,7 +982,8 @@ fun SurakshaAuthenticatedShell(
                         onSelectStateForFeed = { stateName ->
                             viewModel.selectState(stateName)
                             currentTab = 0
-                        }
+                        },
+                        onOpenMpsDirectory = { currentTab = 4 }
                     )
                     4 -> MpsOfIndiaScreen(
                         uiState = mpsUiState,

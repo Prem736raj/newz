@@ -10,6 +10,7 @@ let testEnv;
 const PROJECT_ID = process.env.GCP_PROJECT || "demo-no-project";
 const ALICE_UID = "alice_123";
 const BOB_UID = "bob_456";
+const EDITOR_UID = "editor_789";
 
 const [emulatorHost, emulatorPortStr] = (
   process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8085"
@@ -61,6 +62,15 @@ function buildValidSavedCase(userId, now) {
     mediaCaption: "Verified incident photo & video broadcast (POCSO Section 23 compliant).",
     createdAt: now,
     updatedAt: now,
+  };
+}
+
+function buildValidPublicDispatch(userId, now) {
+  const payload = buildValidSavedCase(userId, now);
+  delete payload.personalNotes;
+  return {
+    ...payload,
+    visibility: "PUBLIC",
   };
 }
 
@@ -185,21 +195,70 @@ test("Authenticated owner can create and list case_updates while cross-user is d
   );
 });
 
-test("Public dispatches: Alice can publish news with image/video URL, Bob can read/list, but Bob cannot overwrite or delete", async () => {
+test("Authenticated owner can create and read correction_requests while cross-user is denied", async () => {
+  const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
+  const corrRef = aliceDb
+    .collection("users")
+    .doc(ALICE_UID)
+    .collection("correction_requests")
+    .doc("corr_01");
+
+  const now = new Date();
+  await assertSucceeds(
+    corrRef.set({
+      userId: ALICE_UID,
+      caseId: "case_ap_school_chainsaw_01",
+      issueType: "Court / Stage Update",
+      details: "High court hearing adjourned to next month per official cause list.",
+      status: "PENDING_EDITORIAL_REVIEW",
+      createdAt: now,
+      updatedAt: now,
+    })
+  );
+  await assertSucceeds(
+    aliceDb.collection("users").doc(ALICE_UID).collection("correction_requests").get()
+  );
+
+  const bobDb = testEnv.authenticatedContext(BOB_UID).firestore();
+  await assertFails(
+    bobDb
+      .collection("users")
+      .doc(ALICE_UID)
+      .collection("correction_requests")
+      .doc("corr_01")
+      .get()
+  );
+});
+
+test("Public dispatches: regular users CANNOT publish directly, only verified editors can publish without personalNotes", async () => {
   const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
   const bobDb = testEnv.authenticatedContext(BOB_UID).firestore();
+  const editorDb = testEnv.authenticatedContext(EDITOR_UID, { editor: true }).firestore();
   const unauthDb = testEnv.unauthenticatedContext().firestore();
   const now = new Date();
 
-  const aliceDispatchRef = aliceDb.collection("public_dispatches").doc("case_public_01");
-  await assertSucceeds(
-    aliceDispatchRef.set({
-      ...buildValidSavedCase(ALICE_UID, now),
-      visibility: "PUBLIC",
+  // Regular authenticated client (Alice) is DENIED direct write to /public_dispatches
+  await assertFails(
+    aliceDb.collection("public_dispatches").doc("case_unauth_pub").set(
+      buildValidPublicDispatch(ALICE_UID, now)
+    )
+  );
+
+  // Even a verified editor is DENIED if personalNotes is included in a public dispatch
+  await assertFails(
+    editorDb.collection("public_dispatches").doc("case_leak_notes").set({
+      ...buildValidPublicDispatch(EDITOR_UID, now),
+      personalNotes: "Private survivor note that must never be public",
     })
   );
 
-  // Bob (another user on another phone) can read and list PUBLIC dispatches
+  // Verified editor CAN publish a clean public dispatch without personalNotes
+  const editorDispatchRef = editorDb.collection("public_dispatches").doc("case_public_01");
+  await assertSucceeds(
+    editorDispatchRef.set(buildValidPublicDispatch(EDITOR_UID, now))
+  );
+
+  // Bob and Alice can read and list PUBLIC dispatches
   await assertSucceeds(
     bobDb
       .collection("public_dispatches")
@@ -210,7 +269,7 @@ test("Public dispatches: Alice can publish news with image/video URL, Bob can re
     bobDb.collection("public_dispatches").doc("case_public_01").get()
   );
 
-  // Bob cannot modify or delete Alice's public dispatch
+  // Bob cannot modify or delete the public dispatch
   await assertFails(
     bobDb.collection("public_dispatches").doc("case_public_01").update({
       title: "Tampered headline by Bob",

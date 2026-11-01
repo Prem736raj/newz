@@ -8,6 +8,9 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.data.model.CorrectionRequestEntity
 import com.example.data.model.SavedCaseOfflineEntity
 import com.example.data.model.TranslationCacheEntity
 import kotlinx.coroutines.flow.Flow
@@ -45,16 +48,83 @@ interface TranslationCacheDao {
     suspend fun upsertTranslations(entities: List<TranslationCacheEntity>)
 }
 
+@Dao
+interface CorrectionRequestDao {
+    @Query("SELECT * FROM correction_requests_offline ORDER BY createdAtMillis DESC")
+    fun observeAllCorrectionRequests(): Flow<List<CorrectionRequestEntity>>
+
+    @Query("SELECT * FROM correction_requests_offline WHERE caseId = :caseId ORDER BY createdAtMillis DESC")
+    suspend fun getCorrectionRequestsForCase(caseId: String): List<CorrectionRequestEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCorrectionRequest(entity: CorrectionRequestEntity)
+}
+
 @Database(
-    entities = [SavedCaseOfflineEntity::class, TranslationCacheEntity::class],
-    version = 3,
+    entities = [
+        SavedCaseOfflineEntity::class,
+        TranslationCacheEntity::class,
+        CorrectionRequestEntity::class
+    ],
+    version = 4,
     exportSchema = false
 )
 abstract class SurakshaDatabase : RoomDatabase() {
     abstract fun savedCaseOfflineDao(): SavedCaseOfflineDao
     abstract fun translationCacheDao(): TranslationCacheDao
+    abstract fun correctionRequestDao(): CorrectionRequestDao
 
     companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `translation_cache` (
+                        `contentId` TEXT NOT NULL,
+                        `langCode` TEXT NOT NULL,
+                        `field` TEXT NOT NULL,
+                        `text` TEXT NOT NULL,
+                        `sourceHash` INTEGER NOT NULL,
+                        `updatedAtMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`contentId`, `langCode`, `field`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE `saved_cases_offline` ADD COLUMN `imageUrl` TEXT NOT NULL DEFAULT ''")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE `saved_cases_offline` ADD COLUMN `videoUrl` TEXT NOT NULL DEFAULT ''")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE `saved_cases_offline` ADD COLUMN `mediaCaption` TEXT NOT NULL DEFAULT ''")
+                } catch (_: Exception) {}
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `correction_requests_offline` (
+                        `requestId` TEXT NOT NULL,
+                        `caseId` TEXT NOT NULL,
+                        `issueType` TEXT NOT NULL,
+                        `details` TEXT NOT NULL,
+                        `status` TEXT NOT NULL,
+                        `createdAtMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`requestId`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         @Volatile
         private var INSTANCE: SurakshaDatabase? = null
 
@@ -64,7 +134,11 @@ abstract class SurakshaDatabase : RoomDatabase() {
                     context.applicationContext,
                     SurakshaDatabase::class.java,
                     "suraksha_chronicle_offline.db"
-                ).fallbackToDestructiveMigration(true).build().also { INSTANCE = it }
+                )
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .fallbackToDestructiveMigrationOnDowngrade(true)
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }

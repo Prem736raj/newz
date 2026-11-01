@@ -3,6 +3,7 @@ package com.example.data.repository
 import android.content.Context
 import com.example.R
 import com.example.data.model.CaseFollowUp
+import com.example.data.model.CorrectionRequest
 import com.example.data.model.SavedCase
 import com.example.data.remote.OperationType
 import com.example.data.remote.handleFirestoreError
@@ -63,6 +64,26 @@ class SurakshaFirestoreRepository(private val db: FirebaseFirestore) {
                 .map { snapshot ->
                     snapshot.toObjects(
                         CaseFollowUp::class.java,
+                        DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
+                    )
+                }
+                .catch { error ->
+                    if (error is Exception) {
+                        handleFirestoreError(error, OperationType.LIST, path)
+                    }
+                    throw error
+                }
+        )
+    }
+
+    fun observeCorrectionRequests(userId: String = requireUserId()): Flow<List<CorrectionRequest>> = flow {
+        val path = "users/$userId/correction_requests"
+        emitAll(
+            db.collection("users").document(userId).collection("correction_requests")
+                .snapshots()
+                .map { snapshot ->
+                    snapshot.toObjects(
+                        CorrectionRequest::class.java,
                         DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
                     )
                 }
@@ -173,6 +194,10 @@ class SurakshaFirestoreRepository(private val db: FirebaseFirestore) {
         )
     }
 
+    /**
+     * Editor-only public dispatch write. Regular client accounts are denied by Firestore security rules
+     * (`request.auth.token.editor == true`). Never includes `personalNotes` in public payloads.
+     */
     suspend fun publishPublicDispatch(caseId: String, savedCase: SavedCase): Result<String> {
         val uid = requireUserId()
         val safeDocId = caseId.replace(Regex("[^a-zA-Z0-9_\\-]"), "_").take(120).ifBlank { "case_${System.currentTimeMillis()}" }
@@ -195,9 +220,7 @@ class SurakshaFirestoreRepository(private val db: FirebaseFirestore) {
             "createdAt" to (savedCase.createdAt ?: FieldValue.serverTimestamp()),
             "updatedAt" to FieldValue.serverTimestamp()
         )
-        if (!savedCase.personalNotes.isNullOrBlank()) {
-            payload["personalNotes"] = savedCase.personalNotes.take(2000)
-        }
+        // SECURITY & PRIVACY RULE: Never include personalNotes in public_dispatches
         if (savedCase.imageUrl.isNotBlank()) {
             payload["imageUrl"] = savedCase.imageUrl.take(2000)
         }
@@ -245,6 +268,35 @@ class SurakshaFirestoreRepository(private val db: FirebaseFirestore) {
         return try {
             docRef.set(payload).await()
             Result.success(safeUpdateId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.CREATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun submitCorrectionRequest(
+        requestId: String,
+        caseId: String,
+        issueType: String,
+        details: String
+    ): Result<String> {
+        val uid = requireUserId()
+        val safeReqId = requestId.replace(Regex("[^a-zA-Z0-9_\\-]"), "_").take(120).ifBlank { "corr_${System.currentTimeMillis()}" }
+        val safeCaseId = caseId.replace(Regex("[^a-zA-Z0-9_\\-]"), "_").take(120)
+        val docRef = db.collection("users").document(uid).collection("correction_requests").document(safeReqId)
+        val payload = mapOf(
+            "userId" to uid,
+            "caseId" to safeCaseId,
+            "issueType" to issueType.take(100),
+            "details" to details.take(2000),
+            "status" to "PENDING_EDITORIAL_REVIEW",
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+        return try {
+            docRef.set(payload).await()
+            Result.success(safeReqId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

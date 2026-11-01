@@ -12,11 +12,15 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.local.SurakshaArchiveSeedData
+import com.example.data.local.SurakshaDatabase
 import com.example.data.local.SurakshaHindiSeedTranslations
 import com.example.data.local.UserPreferencesRepository
 import com.example.data.model.AppLanguage
+import com.example.data.model.CaseStage
+import com.example.data.model.CorrectionRequestEntity
 import com.example.data.model.HouseMeta
 import com.example.data.model.ThemeMode
 import com.example.data.model.VerificationStatus
@@ -79,11 +83,48 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `verify rss client deduplication and unverified representative fallback`() {
+    fun `verify rss client deduplication canonical url rfc822 date and unverified court stage fallback`() {
         val rssClient = IndianCrimeNewsRssClient()
         val stem1 = rssClient.normalizeTitleStem("Class 10 Student Attacked in School - The Hindu")
         val stem2 = rssClient.normalizeTitleStem("Class 10 student attacked in school! - Indian Express")
         assertEquals(stem1, stem2)
+
+        // Verify CaseStage.fromCode defaults to UNKNOWN instead of assuming FIR_FILED
+        assertEquals(CaseStage.UNKNOWN, CaseStage.fromCode("UNVERIFIED_EXTERNAL_STAGE"))
+
+        // Verify canonical URL normalization strips tracking parameters
+        val dirtyUrl = "https://www.thehindu.com/news/national/sample-story/article123.ece?utm_source=rss&utm_medium=referral&fbclid=xyz#section"
+        val cleanUrl = rssClient.normalizeCanonicalUrl(dirtyUrl)
+        assertEquals("https://www.thehindu.com/news/national/sample-story/article123.ece", cleanUrl)
+
+        // Verify RFC-822 pubDate parsing extracts real timestamp
+        val sampleRfc822 = "Sun, 01 Nov 2026 08:30:00 +0530"
+        val parsedMillis = rssClient.parseRfc822DateMillis(sampleRfc822, fallbackMillis = 0L)
+        assertTrue("Expected non-zero parsed RFC-822 timestamp", parsedMillis > 0L)
+
+        // Verify RSS XML parser sets CaseStage.UNKNOWN, empty relevantLaws, and unverified MP/MLA fallback
+        val sampleXml = """
+            <rss version="2.0">
+              <channel>
+                <item>
+                  <title> Student safety audit ordered in Pune school - The Indian Express </title>
+                  <link>https://indianexpress.com/article/cities/pune/student-safety-audit-999/?utm_source=rss</link>
+                  <pubDate>Sun, 01 Nov 2026 08:30:00 +0530</pubDate>
+                  <source url="https://indianexpress.com">The Indian Express</source>
+                  <description>Pune school safety audit reported by local correspondent.</description>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+        val parsedItems = rssClient.parseRssXml(sampleXml, "Maharashtra")
+        assertEquals(1, parsedItems.size)
+        val item = parsedItems.first()
+        assertEquals(CaseStage.UNKNOWN, item.caseStage)
+        assertEquals(VerificationStatus.REPORTED_UNCONFIRMED, item.verificationStatus)
+        assertTrue("RSS items must not fabricate statutory citations", item.relevantLaws.isEmpty())
+        assertTrue(item.mlaName.contains("Not verified"))
+        assertTrue(item.mpName.contains("Not verified"))
+        assertEquals("https://indianexpress.com/article/cities/pune/student-safety-audit-999/", item.sourceUrl)
     }
 
     @Test
@@ -132,15 +173,18 @@ class ExampleRobolectricTest {
             }
         }
 
-        // Verify compact location selector pill is displayed
+        // Verify compact location selector pill and editorial hero headline are displayed
         composeTestRule.onNodeWithTag("compact_location_selector_pill").assertIsDisplayed()
         composeTestRule.onNodeWithText("All India").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("editorial_home_hero_headline").assertIsDisplayed()
 
         // Verify first news card media banner, bookmark and follow buttons work
         val firstId = dossiers.first().id
-        composeTestRule.onNodeWithTag("incident_media_banner_$firstId", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("front_page_feed_list").performScrollToIndex(1)
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("save_for_life_btn_$firstId").performScrollTo().performClick()
         assertTrue(savedTriggered)
+        composeTestRule.onNodeWithTag("incident_media_banner_$firstId", useUnmergedTree = true).assertExists()
 
         composeTestRule.onNodeWithTag("follow_case_btn_$firstId").performScrollTo().performClick()
         assertTrue(followTriggered)
@@ -199,8 +243,8 @@ class ExampleRobolectricTest {
         }
 
         // Verify headline and follow button
-        composeTestRule.onNodeWithTag("detail_follow_case_button").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("detail_follow_case_button").performClick()
+        composeTestRule.onNodeWithTag("detail_follow_case_button").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("detail_follow_case_button").performScrollTo().performClick()
         assertTrue(followClicked)
 
         // Verify incident photo & video gallery is displayed for the Andhra Pradesh incident
@@ -283,7 +327,9 @@ class ExampleRobolectricTest {
         activeScreen = 2
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Safety, Helplines & Legal Rights").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("safety_tab_know_your_rights").performClick()
+        composeTestRule.onNodeWithTag("safety_tab_know_your_rights").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("data_and_safety_list").performScrollToIndex(1)
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Public Legal Information Notice").assertIsDisplayed()
     }
@@ -330,8 +376,11 @@ class ExampleRobolectricTest {
         }
 
         // Verify skeleton card and empty state render in Dark Theme at 1.3x font scale
+        composeTestRule.onNodeWithTag("front_page_feed_list").performScrollToIndex(2)
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("editorial_loading_skeleton").assertExists()
         composeTestRule.onNodeWithTag("front_page_feed_list").performScrollToIndex(3)
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("No verified reports match this filter").assertIsDisplayed()
 
         // Switch to 2.0x accessibility font scale and verify layout stability
@@ -397,6 +446,8 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("clear_search_query_button").performClick()
         composeTestRule.waitForIdle()
         assertEquals("", filterState.searchQuery)
+        composeTestRule.onNodeWithTag("front_page_feed_list").performScrollToIndex(1)
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("dossier_card_case_ap_school_chainsaw_01").assertIsDisplayed()
     }
 
@@ -598,6 +649,46 @@ class ExampleRobolectricTest {
             assertNotNull("Missing Hindi summary for ${dossier.id}", hiSummary)
             assertFalse("Hindi title should differ from English for ${dossier.id}", hiTitle == dossier.title)
         }
+    }
+
+    @Test
+    fun `Room CorrectionRequestDao and UserPreferencesRepository persist durability fields`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = Room.inMemoryDatabaseBuilder(context, SurakshaDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val dao = db.correctionRequestDao()
+            val request = CorrectionRequestEntity(
+                requestId = "corr_test_01",
+                caseId = "case_ap_school_chainsaw_01",
+                issueType = "Privacy / Dignity Concern",
+                details = "Please redact street landmark near school.",
+                status = "SUBMITTED_PENDING_REVIEW",
+                createdAtMillis = 1762000000000L
+            )
+            dao.upsertCorrectionRequest(request)
+            val savedList = dao.getCorrectionRequestsForCase("case_ap_school_chainsaw_01")
+            assertEquals(1, savedList.size)
+            assertEquals("Privacy / Dignity Concern", savedList.first().issueType)
+        } finally {
+            db.close()
+        }
+
+        val prefs = UserPreferencesRepository(context)
+        prefs.setFollowedCaseIds(setOf("case_ap_school_chainsaw_01", "case_mh_badlapur_school_02"))
+        prefs.setNotificationsEnabled(false)
+        prefs.setSensitiveBlurEnabled(false)
+
+        val reloaded = UserPreferencesRepository(context).readInitialPreferencesBlocking()
+        assertTrue(reloaded.followedCaseIds.contains("case_ap_school_chainsaw_01"))
+        assertFalse(reloaded.notificationsEnabled)
+        assertFalse(reloaded.sensitiveBlurEnabled)
+
+        // Restore defaults
+        prefs.setFollowedCaseIds(setOf("case_ap_school_chainsaw_01"))
+        prefs.setNotificationsEnabled(true)
+        prefs.setSensitiveBlurEnabled(true)
     }
 
     private fun revealedCaseIdsEmpty(): Set<String> = emptySet()

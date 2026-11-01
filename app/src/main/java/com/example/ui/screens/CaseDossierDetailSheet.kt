@@ -95,6 +95,7 @@ import com.example.data.model.CaseMediaAttachment
 import com.example.data.model.CaseStage
 import com.example.data.model.MediaAttachmentType
 import com.example.ui.components.CaseStageProgressStrip
+import com.example.ui.components.EditorialCourthouseIllustration
 import com.example.ui.components.MachineTranslationBannerRow
 import com.example.ui.components.VerificationBadgePill
 
@@ -182,14 +183,15 @@ fun CaseDossierDetailScreen(
                             }
                             Column(modifier = Modifier.padding(end = 8.dp)) {
                                 Text(
-                                    text = dossier.crimeCategory,
+                                    text = stringResource(R.string.editorial_story_explainer_badge),
                                     style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = "${dossier.cityName}, ${dossier.stateName}",
+                                    text = "${dossier.crimeCategory} • ${dossier.cityName}, ${dossier.stateName}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -448,25 +450,58 @@ fun CaseDossierDetailScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // 4A. Editorial Courthouse Illustration (02_editorial_story.png)
+                EditorialCourthouseIllustration(
+                    badgeText = "ILLUSTRATION"
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 // 4B. Verified Incident Photos & Playable Video Report Gallery
                 IncidentMediaGallerySection(
                     dossier = dossier,
                     onAttachMediaClick = { showAttachMediaModal = true }
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                // 5. Factual Summary Callout
+                // 01 WHAT WE KNOW — Structured Editorial Explainer (02_editorial_story.png & 08_night_case.png)
+                Text(
+                    text = stringResource(R.string.editorial_section_01_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.testTag("story_section_01_what_we_know")
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.editorial_section_01_headline),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.editorial_section_01_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = stringResource(R.string.dossier_key_summary_header),
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
@@ -477,12 +512,120 @@ fun CaseDossierDetailScreen(
                             ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        if (dossier.whatIsConfirmed.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = dossier.whatIsConfirmed,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 02 COURT STATUS — Honest Verification Gate (02_editorial_story.png)
+                Text(
+                    text = stringResource(R.string.editorial_section_02_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.testTag("story_section_02_court_status")
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (dossier.caseStage == CaseStage.UNKNOWN) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.secondary
+                                    }
+                                )
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (dossier.caseStage == CaseStage.UNKNOWN) {
+                                    stringResource(R.string.editorial_court_not_confirmed_title)
+                                } else {
+                                    stageLabel
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (dossier.caseStage == CaseStage.UNKNOWN) {
+                                    stringResource(R.string.editorial_court_not_confirmed_subtitle)
+                                } else {
+                                    dossier.whatCourtDid.ifBlank {
+                                        stringResource(R.string.editorial_court_not_confirmed_subtitle)
+                                    }
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 6. Main Factual Details
+                // 03 WHAT REMAINS UNKNOWN (08_night_case.png)
+                Text(
+                    text = stringResource(R.string.editorial_section_03_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.testTag("story_section_03_unknown")
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = dossier.whatRemainsUnknown.ifBlank {
+                            stringResource(R.string.editorial_court_not_confirmed_subtitle)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(14.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // 04 THE VERIFIED RECORD & FULL BACKGROUND
+                Text(
+                    text = stringResource(R.string.editorial_section_04_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = stringResource(R.string.dossier_background_header),
                     style = MaterialTheme.typography.titleMedium,
@@ -633,28 +776,45 @@ fun CaseDossierDetailScreen(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
-                                        .padding(top = 6.dp, end = 12.dp)
+                                        .padding(top = 2.dp, end = 12.dp)
                                         .fillMaxHeight()
                                 ) {
                                     Box(
+                                        contentAlignment = Alignment.Center,
                                         modifier = Modifier
-                                            .size(if (isLatestMilestone) 12.dp else 9.dp)
+                                            .size(28.dp)
                                             .clip(CircleShape)
                                             .background(
                                                 if (isLatestMilestone) {
-                                                    MaterialTheme.colorScheme.primary
+                                                    MaterialTheme.colorScheme.secondary
                                                 } else {
-                                                    MaterialTheme.colorScheme.outline
+                                                    MaterialTheme.colorScheme.secondaryContainer
                                                 }
                                             )
-                                    )
+                                            .border(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.secondary,
+                                                shape = CircleShape
+                                            )
+                                    ) {
+                                        Text(
+                                            text = "$stepNumber",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isLatestMilestone) {
+                                                MaterialTheme.colorScheme.onSecondary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSecondaryContainer
+                                            }
+                                        )
+                                    }
                                     if (index < orderedUpdates.lastIndex) {
                                         Box(
                                             modifier = Modifier
                                                 .width(2.dp)
                                                 .weight(1f)
                                                 .padding(vertical = 2.dp)
-                                                .background(MaterialTheme.colorScheme.outlineVariant)
+                                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f))
                                         )
                                     }
                                 }
@@ -865,40 +1025,41 @@ fun CaseDossierDetailScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Applicable Statutes
-                Text(
-                    text = stringResource(R.string.dossier_relevant_laws_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    dossier.relevantLaws.forEach { law ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                // Applicable Statutes (shown only when verified statutory citations exist)
+                if (dossier.relevantLaws.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.dossier_relevant_laws_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        dossier.relevantLaws.forEach { law ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Gavel,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = law,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Gavel,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = law,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
                         }
                     }

@@ -3,12 +3,14 @@ package com.example.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.local.CorrectionRequestDao
 import com.example.data.local.SavedCaseOfflineDao
 import com.example.data.local.SurakshaArchiveSeedData
 import com.example.data.local.SurakshaHindiSeedTranslations
 import com.example.data.local.TranslationCacheDao
 import com.example.data.local.UserPreferencesRepository
 import com.example.data.model.AppLanguage
+import com.example.data.model.CorrectionRequestEntity
 import com.example.data.model.TranslationCacheEntity
 import com.example.data.model.CaseDossier
 import com.example.data.model.CaseFollowUp
@@ -59,7 +61,8 @@ class SurakshaViewModel(
     private val currentUserId: String,
     private val userPreferencesRepository: UserPreferencesRepository? = null,
     private val translationCacheDao: TranslationCacheDao? = null,
-    private val translationService: SurakshaTranslationService? = null
+    private val translationService: SurakshaTranslationService? = null,
+    private val correctionRequestDao: CorrectionRequestDao? = null
 ) : ViewModel() {
 
     val isGuestUser: Boolean = currentUserId.isBlank() || currentUserId == "guest_user"
@@ -73,14 +76,14 @@ class SurakshaViewModel(
     private val _filterState = MutableStateFlow(SurakshaFilterState())
     val filterState: StateFlow<SurakshaFilterState> = _filterState.asStateFlow()
 
-    private val _globalSensitiveBlur = MutableStateFlow(false)
+    private val _globalSensitiveBlur = MutableStateFlow(initialPrefs?.sensitiveBlurEnabled ?: false)
     val globalSensitiveBlur: StateFlow<Boolean> = _globalSensitiveBlur.asStateFlow()
 
     private val _revealedCaseIds = MutableStateFlow<Set<String>>(emptySet())
     val revealedCaseIds: StateFlow<Set<String>> = _revealedCaseIds.asStateFlow()
 
     private val _followedCaseIds = MutableStateFlow(
-        setOf(
+        initialPrefs?.followedCaseIds ?: setOf(
             "case_ap_school_chainsaw_01",
             "case_wb_kolkata_medical_03",
             "case_mh_badlapur_school_02"
@@ -102,7 +105,7 @@ class SurakshaViewModel(
     )
     val hasCompletedLanguageOnboarding: StateFlow<Boolean> = _hasCompletedLanguageOnboarding.asStateFlow()
 
-    private val _notificationsEnabled = MutableStateFlow(true)
+    private val _notificationsEnabled = MutableStateFlow(initialPrefs?.notificationsEnabled ?: true)
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
 
     private val _visibleFeedLimit = MutableStateFlow(8)
@@ -286,7 +289,29 @@ class SurakshaViewModel(
                     _themeMode.value = prefs.themeMode
                     _fontScale.value = prefs.fontScale.coerceIn(0.85f, 1.6f)
                     _hasCompletedLanguageOnboarding.value = prefs.hasCompletedLanguageOnboarding
+                    _followedCaseIds.value = prefs.followedCaseIds
+                    _notificationsEnabled.value = prefs.notificationsEnabled
+                    _globalSensitiveBlur.value = prefs.sensitiveBlurEnabled
                 }
+            }
+        }
+        correctionRequestDao?.let { dao ->
+            viewModelScope.launch {
+                dao.observeAllCorrectionRequests()
+                    .catch { emit(emptyList()) }
+                    .collect { entities ->
+                        val grouped = entities.groupBy { it.caseId }.mapValues { (_, list) ->
+                            list.map { "Pending Editorial Review (${it.issueType}): ${it.details}" }
+                        }
+                        if (grouped.isNotEmpty()) {
+                            val merged = _correctionLogs.value.toMutableMap()
+                            for ((cid, entries) in grouped) {
+                                val curr = merged[cid].orEmpty()
+                                merged[cid] = (curr + entries).distinct()
+                            }
+                            _correctionLogs.value = merged
+                        }
+                    }
             }
         }
         viewModelScope.launch {
@@ -368,7 +393,11 @@ class SurakshaViewModel(
     }
 
     fun toggleGlobalSensitiveBlur() {
-        _globalSensitiveBlur.value = !_globalSensitiveBlur.value
+        val next = !_globalSensitiveBlur.value
+        _globalSensitiveBlur.value = next
+        viewModelScope.launch {
+            userPreferencesRepository?.setSensitiveBlurEnabled(next)
+        }
     }
 
     fun revealCaseContent(caseId: String) {
@@ -377,12 +406,16 @@ class SurakshaViewModel(
 
     fun toggleFollowCase(dossier: CaseDossier) {
         val current = _followedCaseIds.value
-        if (current.contains(dossier.id)) {
-            _followedCaseIds.value = current - dossier.id
+        val updated = if (current.contains(dossier.id)) {
             _statusBannerMessage.value = "Unfollowed case updates for '${dossier.title.take(42)}...'"
+            current - dossier.id
         } else {
-            _followedCaseIds.value = current + dossier.id
             _statusBannerMessage.value = "Following case. You will be notified of verified developments."
+            current + dossier.id
+        }
+        _followedCaseIds.value = updated
+        viewModelScope.launch {
+            userPreferencesRepository?.setFollowedCaseIds(updated)
         }
     }
 
@@ -425,11 +458,15 @@ class SurakshaViewModel(
     }
 
     fun toggleNotificationsEnabled() {
-        _notificationsEnabled.value = !_notificationsEnabled.value
-        _statusBannerMessage.value = if (_notificationsEnabled.value) {
+        val next = !_notificationsEnabled.value
+        _notificationsEnabled.value = next
+        _statusBannerMessage.value = if (next) {
             "Verified case update alerts enabled."
         } else {
             "Verified case update alerts paused."
+        }
+        viewModelScope.launch {
+            userPreferencesRepository?.setNotificationsEnabled(next)
         }
     }
 
@@ -446,10 +483,31 @@ class SurakshaViewModel(
     }
 
     fun submitCorrectionOrPrivacyReport(caseId: String, issueType: String, details: String) {
-        if (details.isBlank()) return
+        val cleanDetails = details.trim()
+        if (cleanDetails.isBlank()) return
         val existing = _correctionLogs.value[caseId] ?: emptyList()
-        val entry = "Pending Editorial Review ($issueType): ${details.trim()}"
-        _correctionLogs.value = _correctionLogs.value + (caseId to (existing + entry))
+        val entry = "Pending Editorial Review ($issueType): $cleanDetails"
+        _correctionLogs.value = _correctionLogs.value + (caseId to (existing + entry).distinct())
+        val reqId = "corr_${caseId.takeLast(8)}_${System.currentTimeMillis()}"
+        viewModelScope.launch {
+            correctionRequestDao?.upsertCorrectionRequest(
+                CorrectionRequestEntity(
+                    requestId = reqId,
+                    caseId = caseId,
+                    issueType = issueType,
+                    details = cleanDetails,
+                    status = "PENDING_EDITORIAL_REVIEW"
+                )
+            )
+            if (!isGuestUser) {
+                firestoreRepository.submitCorrectionRequest(
+                    requestId = reqId,
+                    caseId = caseId,
+                    issueType = issueType,
+                    details = cleanDetails
+                )
+            }
+        }
         _statusBannerMessage.value =
             "Editorial & Privacy Review logged ($issueType). Reference ID #${caseId.takeLast(5).uppercase()}."
     }
@@ -642,16 +700,10 @@ class SurakshaViewModel(
                     videoUrl = updatedDossier.videoUrl,
                     mediaCaption = updatedDossier.mediaCaption
                 )
+                // Keep user-attached media strictly in the user's private saved vault; never auto-publish to /public_dispatches
                 firestoreRepository.saveCaseForLife(dossier.id, cloudCase)
-                // Also publish https:// media to shared public_dispatches so all users receive the photo/video
-                if (updatedDossier.imageUrl.startsWith("http") || updatedDossier.videoUrl.startsWith("http")) {
-                    firestoreRepository.publishPublicDispatch(
-                        dossier.id,
-                        cloudCase.copy(visibility = "PUBLIC")
-                    )
-                }
             }
-            _statusBannerMessage.value = "Incident photo/video attached & synced to case dossier."
+            _statusBannerMessage.value = "Incident photo/video saved to your private case dossier."
         }
     }
 
@@ -817,7 +869,9 @@ class SurakshaViewModel(
             )
 
             offlineDao.upsertSavedCase(newDossier.toOfflineEntity(personalNotes))
-            _followedCaseIds.value = _followedCaseIds.value + newCaseId
+            val updatedFollowed = _followedCaseIds.value + newCaseId
+            _followedCaseIds.value = updatedFollowed
+            userPreferencesRepository?.setFollowedCaseIds(updatedFollowed)
             val cloudResult = if (!isGuestUser) {
                 val cloudCase = SavedCase(
                     id = newCaseId,
@@ -839,18 +893,13 @@ class SurakshaViewModel(
                     videoUrl = cleanVid,
                     mediaCaption = cleanCaption
                 )
-                val privateSave = firestoreRepository.saveCaseForLife(newCaseId, cloudCase)
-                // Publish to shared /public_dispatches so all authenticated users see the incident & https:// media
-                firestoreRepository.publishPublicDispatch(
-                    newCaseId,
-                    cloudCase.copy(visibility = "PUBLIC")
-                )
-                privateSave
+                // SECURITY & PRIVACY RULE: Store strictly in user's private vault; never auto-publish to /public_dispatches
+                firestoreRepository.saveCaseForLife(newCaseId, cloudCase)
             } else {
                 Result.failure(IllegalStateException("Guest mode"))
             }
             _statusBannerMessage.value = if (cloudResult.isSuccess) {
-                "Case archived & broadcast to shared Cloud Feed (marked 'Awaiting Verification')."
+                "Case archived in your private Saved Vault (marked 'Awaiting Editorial Review')."
             } else {
                 "Case archived locally in your Saved Vault."
             }

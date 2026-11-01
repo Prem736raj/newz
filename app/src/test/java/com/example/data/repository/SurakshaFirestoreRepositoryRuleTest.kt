@@ -53,7 +53,7 @@ class SurakshaFirestoreRepositoryRuleTest : FirestoreEmulatorTestBase() {
     }
 
     @Test
-    fun publishPublicDispatch_alicePublishes_bobObservesAcrossDevices_succeeds() = runBlocking {
+    fun publishPublicDispatch_regularClient_failsWithPermissionDenied() = runBlocking {
         val aliceUid = signInTestUser(ALICE_EMAIL)
         val aliceRepo = SurakshaFirestoreRepository(firestore)
         val caseId = "pub_${UUID.randomUUID().toString().replace("-", "").take(16)}"
@@ -61,18 +61,32 @@ class SurakshaFirestoreRepositoryRuleTest : FirestoreEmulatorTestBase() {
         val publishResult = withTimeout(DEFAULT_TIMEOUT_MS) {
             aliceRepo.publishPublicDispatch(caseId, sampleSavedCase(aliceUid).copy(visibility = "PUBLIC"))
         }
-        assertTrue("Expected publishPublicDispatch to succeed, got ${publishResult.exceptionOrNull()}", publishResult.isSuccess)
+        assertTrue("Expected regular client publishPublicDispatch to be denied by editor-only rule", publishResult.isFailure)
+        val firestoreEx = publishResult.exceptionOrNull()?.unwrapFirestoreException()
+        assertNotNull(firestoreEx)
+        assertEquals(FirebaseFirestoreException.Code.PERMISSION_DENIED, firestoreEx?.code)
+    }
 
-        // Switch to Bob (simulating a different user's phone) and verify Bob sees Alice's published news + photo + video
-        signInTestUser(BOB_EMAIL)
-        val bobRepo = SurakshaFirestoreRepository(firestore)
-        val bobObserved = withTimeout(FLOW_TIMEOUT_MS) {
-            bobRepo.observePublicDispatches().first { list -> list.any { it.id == caseId } }
+    @Test
+    fun submitCorrectionRequest_and_observeCorrectionRequests_authenticatedOwner_succeeds() = runBlocking {
+        val aliceUid = signInTestUser(ALICE_EMAIL)
+        val repository = SurakshaFirestoreRepository(firestore)
+        val reqId = "corr_${UUID.randomUUID().toString().replace("-", "").take(16)}"
+
+        val result = withTimeout(DEFAULT_TIMEOUT_MS) {
+            repository.submitCorrectionRequest(
+                requestId = reqId,
+                caseId = "case_ap_school_chainsaw_01",
+                issueType = "Court / Stage Update",
+                details = "Official high court docket confirms chargesheet cognizance date."
+            )
         }
-        val received = bobObserved.first { it.id == caseId }
-        assertEquals("Andhra Pradesh", received.stateName)
-        assertTrue(received.imageUrl.startsWith("https://"))
-        assertTrue(received.videoUrl.startsWith("https://"))
+        assertTrue("Expected submitCorrectionRequest to succeed, got ${result.exceptionOrNull()}", result.isSuccess)
+
+        val emitted = withTimeout(FLOW_TIMEOUT_MS) {
+            repository.observeCorrectionRequests(aliceUid).first { list -> list.any { it.id == reqId } }
+        }
+        assertTrue(emitted.any { it.id == reqId && it.issueType == "Court / Stage Update" })
     }
 
     @Test
