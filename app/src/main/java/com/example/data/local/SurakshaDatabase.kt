@@ -64,7 +64,7 @@ abstract class SurakshaDatabase : RoomDatabase() {
                     context.applicationContext,
                     SurakshaDatabase::class.java,
                     "suraksha_chronicle_offline.db"
-                ).fallbackToDestructiveMigration(true).build().also { INSTANCE = it }
+                ).build().also { INSTANCE = it }
             }
         }
     }
