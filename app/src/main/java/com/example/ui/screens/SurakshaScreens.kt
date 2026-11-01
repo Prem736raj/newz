@@ -1259,7 +1259,7 @@ fun ArchiveNewIncidentModal(
     var fullReport by remember { mutableStateOf("") }
     val victimCategory by remember { mutableStateOf("Teenage Student (13-19)") }
     val crimeCategory by remember { mutableStateOf("School/Campus Safety") }
-    val caseStage by remember { mutableStateOf(CaseStage.FIR_FILED) }
+    val caseStage by remember { mutableStateOf(CaseStage.STATUS_UNVERIFIED) }
     var personalNotes by remember { mutableStateOf("") }
 
     AlertDialog(
