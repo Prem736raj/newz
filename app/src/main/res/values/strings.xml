@@ -71,9 +71,9 @@
     <string name="onboarding_continue_btn">Continue in %1$s</string>
 
     <!-- Settings, Notifications & Display Preferences Dialogs -->
-    <string name="notifications_dialog_title">Case Update Alerts</string>
-    <string name="notifications_followed_title">Followed Case Notifications</string>
-    <string name="notifications_followed_subtitle">Notify when chargesheets, court hearings, or verified updates are logged.</string>
+    <string name="notifications_dialog_title">Follow List</string>
+    <string name="notifications_followed_title">Notifications unavailable</string>
+    <string name="notifications_followed_subtitle">Following is session-only. Automatic case update alerts are not implemented.</string>
     <string name="notifications_empty_text">You are not following any cases yet. Tap \'Follow\' on any news report or case card to track confirmed milestones.</string>
     <string name="notifications_following_count">Currently following %1$d case(s):</string>
     <string name="settings_title">Reading &amp; Display Preferences</string>
