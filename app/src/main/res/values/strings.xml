@@ -107,6 +107,7 @@
     <!-- Case Stages -->
     <string name="stage_reported">Incident Reported</string>
     <string name="stage_fir_filed">FIR Registered</string>
+    <string name="stage_status_unverified">Legal status unverified</string>
     <string name="stage_under_investigation">Investigation Ongoing</string>
     <string name="stage_arrest_made">Arrest / Custody</string>
     <string name="stage_chargesheet_filed">Chargesheet Filed</string>
