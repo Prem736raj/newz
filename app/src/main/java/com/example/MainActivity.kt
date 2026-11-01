@@ -1009,7 +1009,8 @@ fun SurakshaAuthenticatedShell(
                             }
                             Switch(
                                 checked = notificationsEnabled,
-                                onCheckedChange = { viewModel.toggleNotificationsEnabled() },
+                                onCheckedChange = null,
+                                enabled = false,
                                 modifier = Modifier.testTag("toggle_notifications_switch")
                             )
                         }
