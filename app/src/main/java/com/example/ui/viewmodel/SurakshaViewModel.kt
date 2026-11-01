@@ -71,19 +71,13 @@ class SurakshaViewModel(
     private val _filterState = MutableStateFlow(SurakshaFilterState())
     val filterState: StateFlow<SurakshaFilterState> = _filterState.asStateFlow()
 
-    private val _globalSensitiveBlur = MutableStateFlow(false)
+    private val _globalSensitiveBlur = MutableStateFlow(true)
     val globalSensitiveBlur: StateFlow<Boolean> = _globalSensitiveBlur.asStateFlow()
 
     private val _revealedCaseIds = MutableStateFlow<Set<String>>(emptySet())
     val revealedCaseIds: StateFlow<Set<String>> = _revealedCaseIds.asStateFlow()
 
-    private val _followedCaseIds = MutableStateFlow(
-        setOf(
-            "case_ap_school_chainsaw_01",
-            "case_wb_kolkata_medical_03",
-            "case_mh_badlapur_school_02"
-        )
-    )
+    private val _followedCaseIds = MutableStateFlow<Set<String>>(emptySet())
     val followedCaseIds: StateFlow<Set<String>> = _followedCaseIds.asStateFlow()
 
     private val _themeMode = MutableStateFlow(initialPrefs?.themeMode ?: ThemeMode.SYSTEM)
@@ -100,7 +94,7 @@ class SurakshaViewModel(
     )
     val hasCompletedLanguageOnboarding: StateFlow<Boolean> = _hasCompletedLanguageOnboarding.asStateFlow()
 
-    private val _notificationsEnabled = MutableStateFlow(true)
+    private val _notificationsEnabled = MutableStateFlow(false)
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
 
     private val _visibleFeedLimit = MutableStateFlow(8)
@@ -142,6 +136,7 @@ class SurakshaViewModel(
             }
     }
 
+    // TODO(release blocker): partition Room data by authenticated UID before production.
     private val offlineSavedCasesFlow = offlineDao.observeAllSavedCases()
         .catch { e ->
             Log.w("SurakshaVM", "Error observing Room saved_cases_offline", e)
@@ -177,7 +172,7 @@ class SurakshaViewModel(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000L),
         initialValue = localizeDossiers(
-            dossiers = SurakshaArchiveSeedData.buildInitialCaseDossiers().map {
+            dossiers = SurakshaArchiveSeedData.buildPublishedCaseDossiers().map {
                 it.copy(isFollowed = _followedCaseIds.value.contains(it.id))
             },
             language = _appLanguage.value,
@@ -279,22 +274,7 @@ class SurakshaViewModel(
         viewModelScope.launch {
             translationService?.ensureHindiSeedTranslationsCached()
         }
-        seedFlagshipAndhraPradeshCaseIfEmpty()
         refreshLiveIndianNews()
-    }
-
-    private fun seedFlagshipAndhraPradeshCaseIfEmpty() {
-        viewModelScope.launch {
-            val flagship = SurakshaArchiveSeedData.buildInitialCaseDossiers().first()
-            val existingOffline = offlineDao.getSavedCaseById(flagship.id)
-            if (existingOffline == null) {
-                offlineDao.upsertSavedCase(
-                    flagship.toOfflineEntity(
-                        "Pinned flagship dossier: Andhra Pradesh Class 10 classroom security breach tracked for court and school-safety accountability."
-                    )
-                )
-            }
-        }
     }
 
     fun selectState(stateName: String) {
@@ -369,7 +349,7 @@ class SurakshaViewModel(
             _statusBannerMessage.value = "Unfollowed case updates for '${dossier.title.take(42)}...'"
         } else {
             _followedCaseIds.value = current + dossier.id
-            _statusBannerMessage.value = "Following case. You will be notified of verified developments."
+            _statusBannerMessage.value = "Added to follow list for this session. Notifications are not active."
         }
     }
 
@@ -438,7 +418,7 @@ class SurakshaViewModel(
         val entry = "Pending Editorial Review ($issueType): ${details.trim()}"
         _correctionLogs.value = _correctionLogs.value + (caseId to (existing + entry))
         _statusBannerMessage.value =
-            "Editorial & Privacy Review logged ($issueType). Reference ID #${caseId.takeLast(5).uppercase()}."
+            "Draft recorded on this screen only. No report was submitted or reference ID issued."
     }
 
     fun getAvailableDistricts(stateName: String): List<DistrictJurisdiction> {
@@ -458,20 +438,12 @@ class SurakshaViewModel(
         districtName: String,
         cityName: String
     ): CityJurisdiction? {
-        if (stateName == "All India") return null
+        if (stateName == "All India" || districtName == "All Districts" || cityName == "All Cities") return null
         val stateObj = allStates.find { it.stateName.equals(stateName, ignoreCase = true) } ?: return null
-        val districtObj = if (districtName == "All Districts") {
-            stateObj.districts.firstOrNull()
-        } else {
-            stateObj.districts.find { it.districtName.equals(districtName, ignoreCase = true) }
+        val districtObj = stateObj.districts.find {
+            it.districtName.equals(districtName, ignoreCase = true)
         } ?: return null
-
-        return if (cityName == "All Cities") {
-            districtObj.cities.firstOrNull()
-        } else {
-            districtObj.cities.find { it.cityName.equals(cityName, ignoreCase = true) }
-                ?: districtObj.cities.firstOrNull()
-        }
+        return districtObj.cities.find { it.cityName.equals(cityName, ignoreCase = true) }
     }
 
     fun refreshLiveIndianNews(stateOverride: String? = null) {
@@ -495,10 +467,10 @@ class SurakshaViewModel(
                     }
                 } else {
                     _feedSyncNote.value =
-                        "Showing verified archival & cached reports (live syndication feed unreachable or rate-limited)."
+                        "Unable to refresh. Showing previously available reports; verification status varies."
                 }
             } catch (e: Exception) {
-                _feedSyncNote.value = "Offline mode: displaying verified local archive."
+                _feedSyncNote.value = "Unable to refresh. Showing previously available reports; verification status varies."
             } finally {
                 _isRefreshingLive.value = false
             }
@@ -542,7 +514,7 @@ class SurakshaViewModel(
                     _statusBannerMessage.value = if (res.isSuccess) {
                         "Saved for offline reading & synced to your account."
                     } else {
-                        "Saved to device for offline reading (cloud sync pending)."
+                        "Saved on this device. Cloud sync failed; no automatic retry is configured."
                     }
                 } else {
                     _statusBannerMessage.value = "Saved to device for offline reading."
@@ -602,7 +574,7 @@ class SurakshaViewModel(
             } else {
                 Result.failure(IllegalStateException("Guest mode"))
             }
-            val updatedDossier = dossier.copy(caseStage = newStage)
+            val updatedDossier = dossier // User notes must never change a verified case's official legal stage.
             offlineDao.upsertSavedCase(
                 updatedDossier.toOfflineEntity(
                     dossier.personalNotes.ifBlank { "Latest logged update: $headline" }
@@ -624,7 +596,7 @@ class SurakshaViewModel(
                         mpName = "${dossier.mpName} (${dossier.mpConstituency})",
                         victimCategory = dossier.victimCategory,
                         crimeCategory = dossier.crimeCategory,
-                        caseStage = newStage.code,
+                        caseStage = dossier.caseStage.code,
                         incidentDateLabel = dossier.incidentDateLabel,
                         personalNotes = "Latest logged update: $headline"
                     )
@@ -634,7 +606,7 @@ class SurakshaViewModel(
             _statusBannerMessage.value = if (result.isSuccess) {
                 "Timeline update recorded (marked 'Submitted • Awaiting Verification' & synced)."
             } else {
-                "Timeline update saved to local device."
+                "Timeline entry not saved: cloud update failed. Only the base dossier was cached."
             }
         }
     }
@@ -665,9 +637,9 @@ class SurakshaViewModel(
                 title = title.trim(),
                 summary = summary.trim(),
                 fullReport = fullReport.ifBlank { summary }.trim(),
-                stateName = stateName.ifBlank { "Andhra Pradesh" },
+                stateName = stateName.ifBlank { "Location not specified" },
                 districtName = districtName.ifBlank { "Anakapalli" },
-                cityName = cityName.ifBlank { "Elamanchili" },
+                cityName = cityName.ifBlank { "City not specified" },
                 mlaName = resolvedMla,
                 mlaConstituency = rep?.mlaConstituency ?: "Not verified",
                 mlaParty = rep?.mlaParty ?: "Not verified",
@@ -725,7 +697,7 @@ class SurakshaViewModel(
     }
 
     private fun baseMergedDossiersFlowToSnapshot(): List<CaseDossier> {
-        return SurakshaArchiveSeedData.buildInitialCaseDossiers() + _liveRssDossiers.value
+        return SurakshaArchiveSeedData.buildPublishedCaseDossiers() + _liveRssDossiers.value
     }
 
     private fun localizeDossiers(
@@ -865,7 +837,7 @@ class SurakshaViewModel(
         liveRss: List<CaseDossier>,
         followedIds: Set<String>
     ): List<CaseDossier> {
-        val seedList = SurakshaArchiveSeedData.buildInitialCaseDossiers()
+        val seedList = SurakshaArchiveSeedData.buildPublishedCaseDossiers()
         val savedIds = (cloudSaved.map { it.id } + offlineSaved.map { it.caseId }).toSet()
         val updatesByCaseId = cloudUpdates.groupBy { it.caseId }
 
