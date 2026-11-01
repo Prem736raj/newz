@@ -11,6 +11,7 @@ import androidx.room.RoomDatabase
 import com.example.data.model.SavedCaseOfflineEntity
 import com.example.data.model.TranslationCacheEntity
 import kotlinx.coroutines.flow.Flow
+import java.security.MessageDigest
 
 @Dao
 interface SavedCaseOfflineDao {
@@ -55,16 +56,32 @@ abstract class SurakshaDatabase : RoomDatabase() {
     abstract fun translationCacheDao(): TranslationCacheDao
 
     companion object {
-        @Volatile
-        private var INSTANCE: SurakshaDatabase? = null
+        private val instances = mutableMapOf<String, SurakshaDatabase>()
 
-        fun getInstance(context: Context): SurakshaDatabase {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
+        /**
+         * One physical Room database per authenticated account (or guest).
+         *
+         * The historic, unscoped suraksha_chronicle_offline.db is intentionally
+         * left untouched. Its ownership cannot be safely inferred; an explicit
+         * authenticated recovery/migration flow is required before release.
+         */
+        internal fun databaseNameForUser(userId: String): String {
+            require(userId.isNotBlank()) { "A user scope is required for offline storage." }
+            val digest = MessageDigest.getInstance("SHA-256")
+                .digest(userId.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+                .take(32)
+            return "suraksha_chronicle_offline_$digest.db"
+        }
+
+        fun getInstance(context: Context, userId: String): SurakshaDatabase {
+            val name = databaseNameForUser(userId)
+            return synchronized(this) {
+                instances[name] ?: Room.databaseBuilder(
                     context.applicationContext,
                     SurakshaDatabase::class.java,
-                    "suraksha_chronicle_offline.db"
-                ).build().also { INSTANCE = it }
+                    name
+                ).build().also { instances[name] = it }
             }
         }
     }
