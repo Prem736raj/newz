@@ -1,0 +1,131 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidSavedCase(data) {
+      return data.userId is string && data.userId == request.auth.uid && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 3 && data.title.size() <= 300 &&
+             data.summary is string && data.summary.size() >= 3 && data.summary.size() <= 1000 &&
+             data.fullReport is string && data.fullReport.size() >= 3 && data.fullReport.size() <= 10000 &&
+             data.stateName is string && data.stateName.size() >= 2 && data.stateName.size() <= 100 &&
+             data.districtName is string && data.districtName.size() >= 2 && data.districtName.size() <= 100 &&
+             data.cityName is string && data.cityName.size() >= 2 && data.cityName.size() <= 100 &&
+             data.mlaName is string && data.mlaName.size() >= 2 && data.mlaName.size() <= 200 &&
+             data.mpName is string && data.mpName.size() >= 2 && data.mpName.size() <= 200 &&
+             data.victimCategory is string && data.victimCategory.size() >= 2 && data.victimCategory.size() <= 100 &&
+             data.crimeCategory is string && data.crimeCategory.size() >= 2 && data.crimeCategory.size() <= 100 &&
+             data.caseStage is string && data.caseStage.size() >= 2 && data.caseStage.size() <= 100 &&
+             data.incidentDateLabel is string && data.incidentDateLabel.size() >= 2 && data.incidentDateLabel.size() <= 100 &&
+             (!('personalNotes' in data) || data.personalNotes == null || (data.personalNotes is string && data.personalNotes.size() <= 2000)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidCaseFollowUp(data) {
+      return data.userId is string && data.userId == request.auth.uid && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.caseId is string && data.caseId.size() >= 1 && data.caseId.size() <= 128 &&
+             data.caseTitle is string && data.caseTitle.size() >= 2 && data.caseTitle.size() <= 300 &&
+             data.updateDateLabel is string && data.updateDateLabel.size() >= 2 && data.updateDateLabel.size() <= 100 &&
+             data.stageBadge is string && data.stageBadge.size() >= 2 && data.stageBadge.size() <= 100 &&
+             data.headline is string && data.headline.size() >= 3 && data.headline.size() <= 300 &&
+             data.details is string && data.details.size() >= 3 && data.details.size() <= 5000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/saved_cases/{caseId} {
+      allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(caseId);
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(caseId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'title', 'summary', 'fullReport',
+                         'stateName', 'districtName', 'cityName',
+                         'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
+                         'caseStage', 'incidentDateLabel', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'title', 'summary', 'fullReport',
+                         'stateName', 'districtName', 'cityName',
+                         'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
+                         'caseStage', 'incidentDateLabel', 'personalNotes',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidSavedCase(incoming());
+
+      allow update: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(caseId) &&
+                       isValidSavedCase(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'summary', 'fullReport',
+                         'stateName', 'districtName', 'cityName',
+                         'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
+                         'caseStage', 'incidentDateLabel', 'personalNotes',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(caseId);
+    }
+
+    match /users/{userId}/case_updates/{updateId} {
+      allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(updateId);
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(updateId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'caseId', 'caseTitle', 'updateDateLabel',
+                         'stageBadge', 'headline', 'details', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'caseId', 'caseTitle', 'updateDateLabel',
+                         'stageBadge', 'headline', 'details', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidCaseFollowUp(incoming());
+
+      allow update: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(updateId) &&
+                       isValidCaseFollowUp(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().caseId == existing().caseId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'caseTitle', 'updateDateLabel', 'stageBadge',
+                         'headline', 'details', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(updateId);
+    }
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "entities": {
+    "SavedCase": {
+      "title": "SavedCase",
+      "description": "A crime or violence case against a girl, teenager, or woman in India permanently archived ('Saved for Life') by a user, including State-District-City hierarchy and local MP/MLA accountability details.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the authenticated user who archived this case."
+        },
+        "title": {
+          "type": "string",
+          "description": "Headline of the incident or case dossier."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Concise factual summary of the incident."
+        },
+        "fullReport": {
+          "type": "string",
+          "description": "Full investigative report and longitudinal case background."
+        },
+        "stateName": {
+          "type": "string",
+          "description": "Indian State or Union Territory where the incident occurred."
+        },
+        "districtName": {
+          "type": "string",
+          "description": "District within the state where the incident occurred."
+        },
+        "cityName": {
+          "type": "string",
+          "description": "City, town, or locality where the incident occurred."
+        },
+        "mlaName": {
+          "type": "string",
+          "description": "Name and constituency of the local MLA (Member of Legislative Assembly)."
+        },
+        "mpName": {
+          "type": "string",
+          "description": "Name and constituency of the local MP (Member of Parliament)."
+        },
+        "victimCategory": {
+          "type": "string",
+          "description": "Victim demographic category (e.g., Schoolgirl / Minor, Teenage Student, Woman)."
+        },
+        "crimeCategory": {
+          "type": "string",
+          "description": "Category of violence or crime (e.g., School/Campus Attack, POCSO/Minor Assault, Domestic Violence)."
+        },
+        "caseStage": {
+          "type": "string",
+          "description": "Current judicial/investigation stage (e.g., FIR_FILED, ACCUSED_ARRESTED, CHARGESHEET_FILED, TRIAL_ONGOING, VERDICT_DELIVERED, JUSTICE_PENDING)."
+        },
+        "incidentDateLabel": {
+          "type": "string",
+          "description": "Human-readable date of the incident."
+        },
+        "personalNotes": {
+          "type": "string",
+          "description": "Optional follow-up notes or accountability reminders added by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the case was archived (clients must write FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the case archive was last updated (clients must write FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "summary",
+        "fullReport",
+        "stateName",
+        "districtName",
+        "cityName",
+        "mlaName",
+        "mpName",
+        "victimCategory",
+        "crimeCategory",
+        "caseStage",
+        "incidentDateLabel",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CaseFollowUp": {
+      "title": "CaseFollowUp",
+      "description": "A chronological follow-up update logged by an authenticated user to track progress on a saved case 1 month, 2 months, or longer after the initial crime.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the authenticated user who logged this follow-up update."
+        },
+        "caseId": {
+          "type": "string",
+          "description": "ID of the tracked case dossier."
+        },
+        "caseTitle": {
+          "type": "string",
+          "description": "Title of the case dossier being updated."
+        },
+        "updateDateLabel": {
+          "type": "string",
+          "description": "Milestone label (e.g., 'Month 1 Follow-Up', 'Day 45 Court Hearing')."
+        },
+        "stageBadge": {
+          "type": "string",
+          "description": "Updated investigation or judicial stage badge."
+        },
+        "headline": {
+          "type": "string",
+          "description": "Headline of the follow-up development."
+        },
+        "details": {
+          "type": "string",
+          "description": "Detailed factual description of the police, court, or MP/MLA action."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the follow-up was recorded (clients must write FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the follow-up was last modified (clients must write FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "caseId",
+        "caseTitle",
+        "updateDateLabel",
+        "stageBadge",
+        "headline",
+        "details",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/saved_cases/{caseId}": {
+      "schema": {
+        "$ref": "#/entities/SavedCase"
+      },
+      "description": "Per-user permanent 'Save for Life' archive of crime dossiers and user-logged incidents."
+    },
+    "/users/{userId}/case_updates/{updateId}": {
+      "schema": {
+        "$ref": "#/entities/CaseFollowUp"
+      },
+      "description": "Per-user chronological follow-up updates tracking long-term justice outcomes for archived cases."
+    }
+  }
+}
