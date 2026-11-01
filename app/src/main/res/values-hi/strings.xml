@@ -107,6 +107,7 @@
     <!-- Case Stages -->
     <string name="stage_reported">घटना दर्ज / रिपोर्ट</string>
     <string name="stage_fir_filed">प्राथमिकी (FIR) दर्ज</string>
+    <string name="stage_status_unverified">कानूनी स्थिति सत्यापित नहीं</string>
     <string name="stage_under_investigation">जांच जारी</string>
     <string name="stage_arrest_made">गिरफ़्तारी / हिरासत</string>
     <string name="stage_chargesheet_filed">आरोपपत्र (चार्जशीट) दाखिल</string>
