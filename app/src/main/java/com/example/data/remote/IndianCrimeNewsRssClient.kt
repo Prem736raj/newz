@@ -224,11 +224,11 @@ class IndianCrimeNewsRssClient {
                                                 dateLabel = pubDate.ifBlank { "Publication date unavailable" },
                                                 stageBadge = "Initial Report",
                                                 headline = "Published by $source",
-                                                details = "Syndicated dispatch. Follow this report to track confirmed FIR, investigation, or court updates.",
+                                                details = "Syndicated headline. No automatic official follow-up or notification service is configured.",
                                                 sourceName = source,
                                                 verificationStatus = VerificationStatus.REPORTED_UNCONFIRMED,
                                                 sourceReferenceUrl = safeSourceUrl,
-                                                lastCheckedDate = "Editorial review pending"
+                                                lastCheckedDate = "Not independently reviewed"
                                             )
                                         ),
                                         isLiveRss = true,
