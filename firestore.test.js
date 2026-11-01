@@ -56,6 +56,9 @@ function buildValidSavedCase(userId, now) {
     caseStage: "CHARGESHEET_FILED",
     incidentDateLabel: "14 Aug 2026",
     personalNotes: "Monitor fast-track POCSO and attempt-to-murder trial progress.",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Andhra_Pradesh_High_Court.jpg/960px-Andhra_Pradesh_High_Court.jpg",
+    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    mediaCaption: "Verified incident photo & video broadcast (POCSO Section 23 compliant).",
     createdAt: now,
     updatedAt: now,
   };
@@ -178,6 +181,51 @@ test("Authenticated owner can create and list case_updates while cross-user is d
       .doc(ALICE_UID)
       .collection("case_updates")
       .doc("upd_01")
+      .get()
+  );
+});
+
+test("Public dispatches: Alice can publish news with image/video URL, Bob can read/list, but Bob cannot overwrite or delete", async () => {
+  const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
+  const bobDb = testEnv.authenticatedContext(BOB_UID).firestore();
+  const unauthDb = testEnv.unauthenticatedContext().firestore();
+  const now = new Date();
+
+  const aliceDispatchRef = aliceDb.collection("public_dispatches").doc("case_public_01");
+  await assertSucceeds(
+    aliceDispatchRef.set({
+      ...buildValidSavedCase(ALICE_UID, now),
+      visibility: "PUBLIC",
+    })
+  );
+
+  // Bob (another user on another phone) can read and list PUBLIC dispatches
+  await assertSucceeds(
+    bobDb
+      .collection("public_dispatches")
+      .where("visibility", "==", "PUBLIC")
+      .get()
+  );
+  await assertSucceeds(
+    bobDb.collection("public_dispatches").doc("case_public_01").get()
+  );
+
+  // Bob cannot modify or delete Alice's public dispatch
+  await assertFails(
+    bobDb.collection("public_dispatches").doc("case_public_01").update({
+      title: "Tampered headline by Bob",
+      updatedAt: new Date(),
+    })
+  );
+  await assertFails(
+    bobDb.collection("public_dispatches").doc("case_public_01").delete()
+  );
+
+  // Unauthenticated client cannot read or write public_dispatches
+  await assertFails(
+    unauthDb
+      .collection("public_dispatches")
+      .where("visibility", "==", "PUBLIC")
       .get()
   );
 });

@@ -546,7 +546,15 @@ fun SurakshaAuthenticatedShell(
                 onOpenRelatedDossier = { related ->
                     viewModel.openDossierDetail(related.id)
                 },
-                correctionLogs = correctionLogs[selectedDossier.id] ?: emptyList()
+                correctionLogs = correctionLogs[selectedDossier.id] ?: emptyList(),
+                onAttachMedia = { imgUrl, vidUrl, caption ->
+                    viewModel.attachMediaToDossier(
+                        dossier = selectedDossier,
+                        imageUrl = imgUrl,
+                        videoUrl = vidUrl,
+                        mediaCaption = caption
+                    )
+                }
             )
             return@SurakshaChronicleTheme
         }
@@ -911,6 +919,29 @@ fun SurakshaAuthenticatedShell(
                             } else {
                                 viewModel.archiveNewIncidentForLife(
                                     title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes
+                                )
+                            }
+                        },
+                        onArchiveNewIncidentWithMedia = { title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes, img, vid, cap ->
+                            if (viewModel.isGuestUser) {
+                                showGuestSignInRequiredDialog = true
+                            } else {
+                                viewModel.archiveNewIncidentForLife(
+                                    title = title,
+                                    summary = summary,
+                                    fullReport = fullReport,
+                                    stateName = st,
+                                    districtName = dist,
+                                    cityName = ct,
+                                    mlaName = mla,
+                                    mpName = mp,
+                                    victimCategory = victim,
+                                    crimeCategory = cat,
+                                    caseStage = stage,
+                                    personalNotes = notes,
+                                    imageUrl = img,
+                                    videoUrl = vid,
+                                    mediaCaption = cap
                                 )
                             }
                         },

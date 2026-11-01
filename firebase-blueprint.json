@@ -61,6 +61,22 @@
           "type": "string",
           "description": "Optional follow-up notes or accountability reminders added by the user."
         },
+        "imageUrl": {
+          "type": "string",
+          "description": "Optional verified https:// photo URL for the incident so all users across devices can view it."
+        },
+        "videoUrl": {
+          "type": "string",
+          "description": "Optional verified https:// video report URL (MP4/HLS/broadcast) for the incident."
+        },
+        "mediaCaption": {
+          "type": "string",
+          "description": "Optional editorial caption and POCSO Section 23 compliance credit for attached media."
+        },
+        "visibility": {
+          "type": "string",
+          "description": "Visibility scope of the case record ('PRIVATE' for personal vault, 'PUBLIC' for shared dispatches)."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
@@ -159,6 +175,12 @@
         "$ref": "#/entities/CaseFollowUp"
       },
       "description": "Per-user chronological follow-up updates tracking long-term justice outcomes for archived cases."
+    },
+    "/public_dispatches/{caseId}": {
+      "schema": {
+        "$ref": "#/entities/SavedCase"
+      },
+      "description": "Publicly broadcast crime & safety dispatches with verified https:// photo and video URLs visible in real time across all users' devices."
     }
   }
 }

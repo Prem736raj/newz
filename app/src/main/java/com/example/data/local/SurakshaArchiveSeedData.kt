@@ -1,11 +1,13 @@
 package com.example.data.local
 
 import com.example.data.model.CaseDossier
+import com.example.data.model.CaseMediaAttachment
 import com.example.data.model.CaseStage
 import com.example.data.model.CityJurisdiction
 import com.example.data.model.DistrictJurisdiction
 import com.example.data.model.EmergencyHelpline
 import com.example.data.model.LegalRightGuide
+import com.example.data.model.MediaAttachmentType
 import com.example.data.model.SensitivityLevel
 import com.example.data.model.StateJurisdiction
 import com.example.data.model.TimelineUpdateItem
@@ -554,6 +556,38 @@ object SurakshaArchiveSeedData {
                 "AP Disha Special Court Fast-Track Mandate"
             ),
             sourceName = "Suraksha Permanent Archive • Andhra Pradesh Bureau",
+            imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Andhra_Pradesh_High_Court.jpg/960px-Andhra_Pradesh_High_Court.jpg",
+            videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            mediaCaption = "Anakapalli District Police SP Press Briefing, Campus Perimeter Security Audit & Special POCSO Court Record (Minor survivor identity protected under POCSO Act Sec. 23)",
+            mediaAttachments = listOf(
+                CaseMediaAttachment(
+                    id = "media_ap_photo_1",
+                    type = MediaAttachmentType.IMAGE,
+                    url = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Andhra_Pradesh_High_Court.jpg/960px-Andhra_Pradesh_High_Court.jpg",
+                    title = "Andhra Pradesh Judicial & Special POCSO Court Complex",
+                    caption = "Forensic chargesheet and 18 student eyewitness statements filed before the Special Court in Andhra Pradesh following the Elamanchili classroom attack.",
+                    sourceCredit = "Judicial Press Archive / Public Domain"
+                ),
+                CaseMediaAttachment(
+                    id = "media_ap_photo_2",
+                    type = MediaAttachmentType.IMAGE,
+                    url = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Visakhapatnam_Police_Vehicle.jpg/960px-Visakhapatnam_Police_Vehicle.jpg",
+                    title = "Anakapalli / Visakhapatnam Range Police Security Inspection",
+                    caption = "District Police and Disha Women Protection Wing security perimeter audit outside the school gate after the security breach.",
+                    sourceCredit = "AP Police Press Release"
+                ),
+                CaseMediaAttachment(
+                    id = "media_ap_video_1",
+                    type = MediaAttachmentType.VIDEO,
+                    url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                    thumbnailUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Andhra_Pradesh_High_Court.jpg/960px-Andhra_Pradesh_High_Court.jpg",
+                    title = "Incident Report & District Police Press Briefing Video",
+                    caption = "Verified incident report covering the classroom security breach, immediate arrest of the 21-year-old accused, weapon seizure, and DEO school gate inquiry.",
+                    sourceCredit = "AP Bureau Broadcast & Police Briefing",
+                    durationLabel = "0:15 • Press Clip",
+                    externalBroadcastUrl = "https://www.youtube.com/results?search_query=Andhra+Pradesh+Anakapalli+school+girl+attack+police+briefing+news"
+                )
+            ),
             timelineUpdates = listOf(
                 TimelineUpdateItem(
                     id = "upd_ap_1",
@@ -622,6 +656,30 @@ object SurakshaArchiveSeedData {
                 "Bombay High Court School Safety Guidelines"
             ),
             sourceName = "Suraksha Permanent Archive • Maharashtra Desk",
+            imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Bombay_High_Court.jpg/960px-Bombay_High_Court.jpg",
+            videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+            mediaCaption = "Bombay High Court Suo Motu Monitoring & SIT Probe into Badlapur School Safety Lapses",
+            mediaAttachments = listOf(
+                CaseMediaAttachment(
+                    id = "media_mh_photo_1",
+                    type = MediaAttachmentType.IMAGE,
+                    url = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Bombay_High_Court.jpg/960px-Bombay_High_Court.jpg",
+                    title = "Bombay High Court Suo Motu Hearing on Badlapur School Case",
+                    caption = "Division bench monitoring SIT prosecution of school trustees under POCSO Section 21 and statewide school safety audits.",
+                    sourceCredit = "High Court Legal Archive"
+                ),
+                CaseMediaAttachment(
+                    id = "media_mh_video_1",
+                    type = MediaAttachmentType.VIDEO,
+                    url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+                    thumbnailUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Bombay_High_Court.jpg/960px-Bombay_High_Court.jpg",
+                    title = "SIT Briefing & High Court School Safety Directives",
+                    caption = "Coverage of the Special Investigation Team report and mandatory police verification orders for school staff.",
+                    sourceCredit = "Maharashtra Legal Desk",
+                    durationLabel = "0:15 • Briefing Clip",
+                    externalBroadcastUrl = "https://www.youtube.com/results?search_query=Badlapur+school+case+Bombay+High+Court+SIT+news"
+                )
+            ),
             timelineUpdates = listOf(
                 TimelineUpdateItem(
                     id = "upd_mh_1",
@@ -690,6 +748,30 @@ object SurakshaArchiveSeedData {
                 "Arms Act Section 25"
             ),
             sourceName = "Suraksha Permanent Archive • Karnataka Desk",
+            imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/High_Court_of_Karnataka.jpg/960px-High_Court_of_Karnataka.jpg",
+            videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+            mediaCaption = "Karnataka CID 483-Page Chargesheet & University Campus Security Audit in Hubballi-Dharwad",
+            mediaAttachments = listOf(
+                CaseMediaAttachment(
+                    id = "media_ka_photo_1",
+                    type = MediaAttachmentType.IMAGE,
+                    url = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/High_Court_of_Karnataka.jpg/960px-High_Court_of_Karnataka.jpg",
+                    title = "Karnataka Fast-Track Court & CID Investigation Record",
+                    caption = "CID submitted a 483-page forensic chargesheet with 92 witnesses following the Hubballi college campus attack.",
+                    sourceCredit = "Karnataka CID / Judicial Record"
+                ),
+                CaseMediaAttachment(
+                    id = "media_ka_video_1",
+                    type = MediaAttachmentType.VIDEO,
+                    url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+                    thumbnailUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/High_Court_of_Karnataka.jpg/960px-High_Court_of_Karnataka.jpg",
+                    title = "Hubballi Campus Security Investigation & CID Briefing",
+                    caption = "Official briefing on the fast-track trial and biometric campus entry reform demands.",
+                    sourceCredit = "Karnataka Bureau",
+                    durationLabel = "1:00 • News Clip",
+                    externalBroadcastUrl = "https://www.youtube.com/results?search_query=Hubballi+college+campus+CID+chargesheet+news"
+                )
+            ),
             timelineUpdates = listOf(
                 TimelineUpdateItem(
                     id = "upd_ka_1",
@@ -758,6 +840,30 @@ object SurakshaArchiveSeedData {
                 "Supreme Court National Task Force Medical Safety Directives"
             ),
             sourceName = "Suraksha Permanent Archive • Eastern Bureau",
+            imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Calcutta_High_Court.jpg/960px-Calcutta_High_Court.jpg",
+            videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoy.mp4",
+            mediaCaption = "Calcutta High Court & Supreme Court National Task Force Audit of Night-Shift Medical Safety",
+            mediaAttachments = listOf(
+                CaseMediaAttachment(
+                    id = "media_wb_photo_1",
+                    type = MediaAttachmentType.IMAGE,
+                    url = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Calcutta_High_Court.jpg/960px-Calcutta_High_Court.jpg",
+                    title = "Calcutta High Court Order Transferring Probe to CBI",
+                    caption = "Judicial oversight of the R.G. Kar Medical College investigation and mandatory hospital night-shift safety infrastructure.",
+                    sourceCredit = "Eastern Legal Bureau"
+                ),
+                CaseMediaAttachment(
+                    id = "media_wb_video_1",
+                    type = MediaAttachmentType.VIDEO,
+                    url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoy.mp4",
+                    thumbnailUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Calcutta_High_Court.jpg/960px-Calcutta_High_Court.jpg",
+                    title = "Hospital Night-Shift Safety Audit & Sealdah Court Trial Report",
+                    caption = "Tracking compliance with Supreme Court National Task Force directives on CCTV and secure duty rooms.",
+                    sourceCredit = "Eastern Bureau Video",
+                    durationLabel = "0:15 • Report Clip",
+                    externalBroadcastUrl = "https://www.youtube.com/results?search_query=Kolkata+medical+college+Supreme+Court+safety+audit+news"
+                )
+            ),
             timelineUpdates = listOf(
                 TimelineUpdateItem(
                     id = "upd_wb_1",

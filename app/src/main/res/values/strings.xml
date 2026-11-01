@@ -381,4 +381,34 @@
     <string name="mps_detail_reason_vacancy">Reason for Vacancy</string>
     <string name="mps_detail_notes">Notes</string>
     <string name="mps_public_sources_footer">Data compiled from public sources. May not reflect the latest changes.</string>
+
+    <!-- Incident Photos, Video Evidence & Direct News Upload -->
+    <string name="media_section_title">Verified Incident Photos &amp; Video Coverage</string>
+    <string name="media_section_subtitle">Press briefings, campus security inspection stills &amp; judicial records (Minor identity protected under POCSO Sec. 23)</string>
+    <string name="media_badge_video">VIDEO REPORT</string>
+    <string name="media_badge_photo">PRESS / EVIDENCE PHOTO</string>
+    <string name="media_play_in_app_btn">Play Video in App</string>
+    <string name="media_pause_video_btn">Pause Video</string>
+    <string name="media_watch_broadcast_btn">Watch Official News Broadcast</string>
+    <string name="media_attach_btn">Attach Real Photo / Video</string>
+    <string name="media_pick_photo_btn">Pick Photo from Device</string>
+    <string name="media_pick_video_btn">Pick Video from Device</string>
+    <string name="media_field_image_url">Photo URL or Picked Device URI (Optional)</string>
+    <string name="media_field_video_url">Video Stream / News Video URL or Picked URI (Optional)</string>
+    <string name="media_field_caption">Photo / Video Caption &amp; Source Credit</string>
+    <string name="media_save_attachment_btn">Save Media to Case</string>
+    <string name="media_attached_photo_ready">Photo attached &amp; ready for display</string>
+    <string name="media_attached_video_ready">Video attached &amp; ready for playback</string>
+    <string name="media_source_credit_format">Source Credit: %1$s</string>
+    <string name="media_player_ready_hint">In-App Video Player • Tap Play or use controls to scrub</string>
+    <string name="media_upload_guide_btn">How Direct News &amp; Media Upload Works</string>
+    <string name="media_upload_guide_title">How News &amp; Media Upload Works (No Custom Server Needed)</string>
+    <string name="media_upload_guide_step1_title">1. Direct In-App Upload (Serverless Cloud Sync)</string>
+    <string name="media_upload_guide_step1_body">Use the \'Publish / Archive Case\' button or \'Attach Real Photo / Video\' inside any dossier. Pick photos/videos from your phone (Android Photo Picker) or paste a direct image/video URL. It saves offline in Room and syncs to Firebase Firestore automatically—no dedicated backend server required.</string>
+    <string name="media_upload_guide_step2_title">2. Automated Live News &amp; Media RSS Ingestion</string>
+    <string name="media_upload_guide_step2_body">Suraksha Chronicle automatically fetches live dispatches and extracts publisher photos (&lt;media:content&gt;, &lt;enclosure&gt;) from Google News RSS in English, Hindi, and 8 other Indian languages on pull-to-refresh.</string>
+    <string name="media_upload_guide_step3_title">3. Multi-User Newsroom Publishing (Optional)</string>
+    <string name="media_upload_guide_step3_body">Because Firebase Firestore &amp; Cloud Storage are serverless, any verified editor or reporter can publish an incident with photos/videos from the app or Firebase Console, and all users receive it in real time without running a custom Node/Python server.</string>
+    <string name="cd_incident_photo">Verified incident photograph</string>
+    <string name="cd_incident_video">Verified incident video report</string>
 </resources>

@@ -381,4 +381,34 @@
     <string name="mps_detail_reason_vacancy">रिक्तता का कारण</string>
     <string name="mps_detail_notes">टिप्पणी</string>
     <string name="mps_public_sources_footer">सार्वजनिक स्रोतों से संकलित डेटा। नवीनतम परिवर्तनों को प्रतिबिंबित नहीं कर सकता है।</string>
+
+    <!-- Incident Photos, Video Evidence & Direct News Upload -->
+    <string name="media_section_title">सत्यापित घटना फ़ोटो और वीडियो कवरेज</string>
+    <string name="media_section_subtitle">पुलिस प्रेस ब्रीफिंग, परिसर सुरक्षा निरीक्षण फ़ोटो और न्यायिक रिकॉर्ड (पॉक्सो धारा 23 के तहत नाबालिग की पहचान सुरक्षित)</string>
+    <string name="media_badge_video">वीडियो रिपोर्ट</string>
+    <string name="media_badge_photo">प्रेस / साक्ष्य फ़ोटो</string>
+    <string name="media_play_in_app_btn">ऐप में वीडियो चलाएं</string>
+    <string name="media_pause_video_btn">वीडियो रोकें</string>
+    <string name="media_watch_broadcast_btn">आधिकारिक न्यूज़ वीडियो प्रसारण देखें</string>
+    <string name="media_attach_btn">असली फ़ोटो / वीडियो जोड़ें</string>
+    <string name="media_pick_photo_btn">फ़ोन से फ़ोटो चुनें</string>
+    <string name="media_pick_video_btn">फ़ोन से वीडियो चुनें</string>
+    <string name="media_field_image_url">फ़ोटो URL या फ़ोन से चुनी गई फ़ोटो (वैकल्पिक)</string>
+    <string name="media_field_video_url">वीडियो स्ट्रीम / न्यूज़ वीडियो URL या फ़ोन से चुना गया वीडियो (वैकल्पिक)</string>
+    <string name="media_field_caption">फ़ोटो / वीडियो विवरण और स्रोत क्रेडिट</string>
+    <string name="media_save_attachment_btn">केस में मीडिया सहेजें</string>
+    <string name="media_attached_photo_ready">फ़ोटो जुड़ गई है और दिखाने के लिए तैयार है</string>
+    <string name="media_attached_video_ready">वीडियो जुड़ गया है और चलाने के लिए तैयार है</string>
+    <string name="media_source_credit_format">स्रोत क्रेडिट: %1$s</string>
+    <string name="media_player_ready_hint">इन-ऐप वीडियो प्लेयर • चलाने या रोकने के लिए टैप करें</string>
+    <string name="media_upload_guide_btn">सीधे न्यूज़ और मीडिया अपलोड कैसे काम करता है</string>
+    <string name="media_upload_guide_title">न्यूज़ और फ़ोटो/वीडियो अपलोड कैसे काम करता है (अलग सर्वर आवश्यक नहीं)</string>
+    <string name="media_upload_guide_step1_title">1. ऐप से सीधा अपलोड (सर्वर-रहित क्लाउड सिंक)</string>
+    <string name="media_upload_guide_step1_body">किसी भी केस के अंदर \'मामला जोड़ें\' या \'असली फ़ोटो / वीडियो जोड़ें\' बटन का उपयोग करें। अपने फ़ोन की गैलरी से फ़ोटो/वीडियो चुनें या URL पेस्ट करें। यह ऑफ़लाइन Room डेटाबेस और Firebase Firestore में तुरंत सहेजा जाता है—इसके लिए किसी अलग सर्वर की आवश्यकता नहीं है।</string>
+    <string name="media_upload_guide_step2_title">2. स्वचालित लाइव न्यूज़ और मीडिया RSS फ़ीड</string>
+    <string name="media_upload_guide_step2_body">सुरक्षा क्रॉनिकल रिफ्रेश करने पर Google News RSS से हिन्दी, अंग्रेज़ी और अन्य भारतीय भाषाओं में ताज़ा खबरें और प्रकाशक फ़ोटो स्वचालित रूप से प्राप्त करता है।</string>
+    <string name="media_upload_guide_step3_title">3. न्यूज़़रूम प्रकाशन (सर्वर-रहित Firebase आर्किटेक्चर)</string>
+    <string name="media_upload_guide_step3_body">क्योंकि Firebase Firestore और Cloud Storage सर्वर-रहित हैं, कोई भी सत्यापित संपादक ऐप या Firebase कंसोल से फ़ोटो/वीडियो के साथ खबर अपलोड कर सकता है और वह बिना किसी कस्टम सर्वर के सभी उपयोगकर्ताओं को तुरंत दिखाई देगी।</string>
+    <string name="cd_incident_photo">सत्यापित घटना फ़ोटो</string>
+    <string name="cd_incident_video">सत्यापित घटना वीडियो रिपोर्ट</string>
 </resources>

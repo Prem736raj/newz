@@ -37,6 +37,10 @@ service cloud.firestore {
              data.caseStage is string && data.caseStage.size() >= 2 && data.caseStage.size() <= 100 &&
              data.incidentDateLabel is string && data.incidentDateLabel.size() >= 2 && data.incidentDateLabel.size() <= 100 &&
              (!('personalNotes' in data) || data.personalNotes == null || (data.personalNotes is string && data.personalNotes.size() <= 2000)) &&
+             (!('imageUrl' in data) || data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 2000)) &&
+             (!('videoUrl' in data) || data.videoUrl == null || (data.videoUrl is string && data.videoUrl.size() <= 2000)) &&
+             (!('mediaCaption' in data) || data.mediaCaption == null || (data.mediaCaption is string && data.mediaCaption.size() <= 1000)) &&
+             (!('visibility' in data) || data.visibility == null || (data.visibility is string && (data.visibility == 'PRIVATE' || data.visibility == 'PUBLIC'))) &&
              data.createdAt is timestamp && data.createdAt <= request.time &&
              data.updatedAt is timestamp && data.updatedAt <= request.time;
     }
@@ -72,6 +76,7 @@ service cloud.firestore {
                          'stateName', 'districtName', 'cityName',
                          'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
                          'caseStage', 'incidentDateLabel', 'personalNotes',
+                         'imageUrl', 'videoUrl', 'mediaCaption', 'visibility',
                          'createdAt', 'updatedAt'
                        ]) &&
                        isValidSavedCase(incoming());
@@ -88,10 +93,54 @@ service cloud.firestore {
                          'stateName', 'districtName', 'cityName',
                          'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
                          'caseStage', 'incidentDateLabel', 'personalNotes',
+                         'imageUrl', 'videoUrl', 'mediaCaption', 'visibility',
                          'updatedAt'
                        ]);
 
       allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(caseId);
+    }
+
+    match /public_dispatches/{caseId} {
+      allow get: if isSignedIn() && isValidId(caseId);
+      allow list: if isSignedIn() && resource.data.visibility == 'PUBLIC';
+
+      allow create: if isSignedIn() &&
+                       isValidId(caseId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().visibility == 'PUBLIC' &&
+                       incoming().keys().hasAll([
+                         'userId', 'title', 'summary', 'fullReport',
+                         'stateName', 'districtName', 'cityName',
+                         'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
+                         'caseStage', 'incidentDateLabel', 'visibility', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'title', 'summary', 'fullReport',
+                         'stateName', 'districtName', 'cityName',
+                         'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
+                         'caseStage', 'incidentDateLabel', 'personalNotes',
+                         'imageUrl', 'videoUrl', 'mediaCaption', 'visibility',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidSavedCase(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(caseId) &&
+                       existing().userId == request.auth.uid &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().visibility == 'PUBLIC' &&
+                       isValidSavedCase(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'summary', 'fullReport',
+                         'stateName', 'districtName', 'cityName',
+                         'mlaName', 'mpName', 'victimCategory', 'crimeCategory',
+                         'caseStage', 'incidentDateLabel', 'personalNotes',
+                         'imageUrl', 'videoUrl', 'mediaCaption', 'visibility',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(caseId) && existing().userId == request.auth.uid;
     }
 
     match /users/{userId}/case_updates/{updateId} {

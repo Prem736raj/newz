@@ -2,7 +2,12 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.MediaController
+import android.widget.VideoView
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,9 +49,13 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.PauseCircleFilled
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextDecrease
 import androidx.compose.material.icons.filled.TextIncrease
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -70,6 +79,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -77,9 +87,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.model.CaseDossier
+import com.example.data.model.CaseMediaAttachment
 import com.example.data.model.CaseStage
+import com.example.data.model.MediaAttachmentType
 import com.example.ui.components.CaseStageProgressStrip
 import com.example.ui.components.MachineTranslationBannerRow
 import com.example.ui.components.VerificationBadgePill
@@ -95,7 +109,8 @@ fun CaseDossierDetailScreen(
     onSubmitCorrection: ((issueType: String, details: String) -> Unit)? = null,
     relatedDossiers: List<CaseDossier> = emptyList(),
     onOpenRelatedDossier: (CaseDossier) -> Unit = {},
-    correctionLogs: List<String> = emptyList()
+    correctionLogs: List<String> = emptyList(),
+    onAttachMedia: ((imageUrl: String, videoUrl: String, caption: String) -> Unit)? = null
 ) {
     BackHandler(onBack = onBack)
 
@@ -103,6 +118,7 @@ fun CaseDossierDetailScreen(
     var fontScale by remember { mutableFloatStateOf(1.0f) }
     var showAddFollowUpModal by remember { mutableStateOf(false) }
     var showCorrectionModal by remember { mutableStateOf(false) }
+    var showAttachMediaModal by remember { mutableStateOf(false) }
     var showMpMlaExpanded by remember { mutableStateOf(false) }
     var showPrivateNoteEditor by remember { mutableStateOf(false) }
     var showOriginalLanguage by remember(dossier.id) { mutableStateOf(false) }
@@ -431,6 +447,14 @@ fun CaseDossierDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // 4B. Verified Incident Photos & Playable Video Report Gallery
+                IncidentMediaGallerySection(
+                    dossier = dossier,
+                    onAttachMediaClick = { showAttachMediaModal = true }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // 5. Factual Summary Callout
                 Surface(
@@ -1042,6 +1066,536 @@ fun CaseDossierDetailScreen(
             }
         )
     }
+
+    if (showAttachMediaModal) {
+        AttachIncidentMediaDialog(
+            dossier = dossier,
+            onDismiss = { showAttachMediaModal = false },
+            onSave = { imgUrl, vidUrl, caption ->
+                onAttachMedia?.invoke(imgUrl, vidUrl, caption)
+                showAttachMediaModal = false
+            }
+        )
+    }
+}
+
+@Composable
+fun IncidentMediaGallerySection(
+    dossier: CaseDossier,
+    onAttachMediaClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val resolvedAttachments = remember(dossier.id, dossier.imageUrl, dossier.videoUrl, dossier.mediaAttachments) {
+        if (dossier.mediaAttachments.isNotEmpty()) {
+            dossier.mediaAttachments
+        } else {
+            buildList {
+                if (dossier.imageUrl.isNotBlank()) {
+                    add(
+                        CaseMediaAttachment(
+                            id = "${dossier.id}_primary_img",
+                            type = MediaAttachmentType.IMAGE,
+                            url = dossier.imageUrl,
+                            thumbnailUrl = dossier.imageUrl,
+                            title = dossier.title,
+                            caption = dossier.mediaCaption.ifBlank { dossier.summary },
+                            sourceCredit = dossier.sourceName
+                        )
+                    )
+                }
+                if (dossier.videoUrl.isNotBlank()) {
+                    add(
+                        CaseMediaAttachment(
+                            id = "${dossier.id}_primary_vid",
+                            type = MediaAttachmentType.VIDEO,
+                            url = dossier.videoUrl,
+                            thumbnailUrl = dossier.imageUrl,
+                            title = dossier.title,
+                            caption = dossier.mediaCaption.ifBlank { dossier.summary },
+                            sourceCredit = dossier.sourceName,
+                            durationLabel = "VIDEO",
+                            externalBroadcastUrl = dossier.videoUrl
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+            .testTag("detail_incident_media_gallery"),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.media_section_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = stringResource(R.string.media_section_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                OutlinedButton(
+                    onClick = onAttachMediaClick,
+                    modifier = Modifier
+                        .heightIn(min = 44.dp)
+                        .testTag("attach_incident_media_button"),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddCircleOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.media_attach_btn), maxLines = 1)
+                }
+            }
+
+            resolvedAttachments.forEach { item ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                color = if (item.type == MediaAttachmentType.VIDEO) {
+                                    MaterialTheme.colorScheme.errorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                },
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (item.type == MediaAttachmentType.VIDEO) {
+                                            Icons.Default.Videocam
+                                        } else {
+                                            Icons.Default.PhotoLibrary
+                                        },
+                                        contentDescription = null,
+                                        tint = if (item.type == MediaAttachmentType.VIDEO) {
+                                            MaterialTheme.colorScheme.onErrorContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        },
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = if (item.type == MediaAttachmentType.VIDEO) {
+                                            stringResource(R.string.media_badge_video)
+                                        } else {
+                                            stringResource(R.string.media_badge_photo)
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (item.type == MediaAttachmentType.VIDEO) {
+                                            MaterialTheme.colorScheme.onErrorContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        },
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            if (item.durationLabel.isNotBlank()) {
+                                Text(
+                                    text = item.durationLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        if (item.type == MediaAttachmentType.IMAGE) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(190.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                            ) {
+                                AsyncImage(
+                                    model = item.url,
+                                    contentDescription = stringResource(R.string.cd_incident_photo),
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        } else {
+                            InAppIncidentVideoPlayer(
+                                videoItem = item,
+                                onOpenBroadcast = { broadcastUrl ->
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, Uri.parse(broadcastUrl))
+                                        )
+                                    }
+                                }
+                            )
+                        }
+
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (item.caption.isNotBlank()) {
+                            Text(
+                                text = item.caption,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (item.sourceCredit.isNotBlank()) {
+                            Text(
+                                text = item.sourceCredit,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InAppIncidentVideoPlayer(
+    videoItem: CaseMediaAttachment,
+    onOpenBroadcast: (String) -> Unit
+) {
+    var isPlayingInApp by remember(videoItem.id) { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(210.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.scrim)
+                .testTag("in_app_video_container_${videoItem.id}"),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isPlayingInApp && videoItem.url.isNotBlank()) {
+                AndroidView(
+                    factory = { ctx ->
+                        VideoView(ctx).apply {
+                            val mediaController = MediaController(ctx)
+                            mediaController.setAnchorView(this)
+                            setMediaController(mediaController)
+                            setVideoURI(Uri.parse(videoItem.url))
+                            setOnPreparedListener { mp ->
+                                mp.isLooping = true
+                                start()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                if (videoItem.thumbnailUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = videoItem.thumbnailUrl,
+                        contentDescription = stringResource(R.string.cd_incident_video),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                Surface(
+                    color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f),
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clickable { isPlayingInApp = true }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.PlayCircleFilled,
+                            contentDescription = stringResource(R.string.cd_incident_video),
+                            tint = MaterialTheme.colorScheme.inverseOnSurface,
+                            modifier = Modifier.size(44.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { isPlayingInApp = !isPlayingInApp },
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
+                    .testTag("toggle_video_playback_${videoItem.id}"),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(
+                    imageVector = if (isPlayingInApp) {
+                        Icons.Default.PauseCircleFilled
+                    } else {
+                        Icons.Default.PlayCircleFilled
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (isPlayingInApp) {
+                        stringResource(R.string.media_pause_video_btn)
+                    } else {
+                        stringResource(R.string.media_play_in_app_btn)
+                    },
+                    maxLines = 1
+                )
+            }
+
+            val broadcastTarget = videoItem.externalBroadcastUrl.ifBlank { videoItem.url }
+            if (broadcastTarget.isNotBlank()) {
+                OutlinedButton(
+                    onClick = { onOpenBroadcast(broadcastTarget) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .testTag("watch_official_broadcast_${videoItem.id}"),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.media_watch_broadcast_btn),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AttachIncidentMediaDialog(
+    dossier: CaseDossier,
+    onDismiss: () -> Unit,
+    onSave: (imageUrl: String, videoUrl: String, caption: String) -> Unit
+) {
+    val context = LocalContext.current
+    var imageUrlInput by remember(dossier.id) { mutableStateOf(dossier.imageUrl) }
+    var videoUrlInput by remember(dossier.id) { mutableStateOf(dossier.videoUrl) }
+    var captionInput by remember(dossier.id) { mutableStateOf(dossier.mediaCaption) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            imageUrlInput = uri.toString()
+        }
+    }
+
+    val videoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            videoUrlInput = uri.toString()
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.media_attach_btn),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.media_section_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("pick_device_photo_button"),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.media_pick_photo_btn),
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            videoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("pick_device_video_button"),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Videocam,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.media_pick_video_btn),
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                if (imageUrlInput.isNotBlank()) {
+                    Text(
+                        text = stringResource(R.string.media_attached_photo_ready),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (videoUrlInput.isNotBlank()) {
+                    Text(
+                        text = stringResource(R.string.media_attached_video_ready),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                OutlinedTextField(
+                    value = imageUrlInput,
+                    onValueChange = { imageUrlInput = it },
+                    label = { Text(stringResource(R.string.media_field_image_url)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("attach_media_image_url_input"),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = videoUrlInput,
+                    onValueChange = { videoUrlInput = it },
+                    label = { Text(stringResource(R.string.media_field_video_url)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("attach_media_video_url_input"),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = captionInput,
+                    onValueChange = { captionInput = it },
+                    label = { Text(stringResource(R.string.media_field_caption)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("attach_media_caption_input"),
+                    minLines = 2
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(imageUrlInput, videoUrlInput, captionInput) },
+                enabled = imageUrlInput.isNotBlank() || videoUrlInput.isNotBlank(),
+                modifier = Modifier.testTag("save_attached_media_button")
+            ) {
+                Text(stringResource(R.string.media_save_attachment_btn))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

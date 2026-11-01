@@ -136,16 +136,19 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("compact_location_selector_pill").assertIsDisplayed()
         composeTestRule.onNodeWithText("All India").assertIsDisplayed()
 
-        // Verify first news card bookmark and follow buttons work
+        // Verify first news card media banner, bookmark and follow buttons work
         val firstId = dossiers.first().id
+        composeTestRule.onNodeWithTag("incident_media_banner_$firstId", useUnmergedTree = true).assertIsDisplayed()
         composeTestRule.onNodeWithTag("save_for_life_btn_$firstId").performScrollTo().performClick()
         assertTrue(savedTriggered)
 
         composeTestRule.onNodeWithTag("follow_case_btn_$firstId").performScrollTo().performClick()
         assertTrue(followTriggered)
 
-        // Tap compact location pill to open bottom sheet
-        composeTestRule.onNodeWithTag("compact_location_selector_pill").performScrollTo().performClick()
+        // Scroll back to top of LazyColumn and tap compact location pill to open bottom sheet
+        composeTestRule.onNodeWithTag("front_page_feed_list").performScrollToIndex(0)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("compact_location_selector_pill").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("location_filter_bottom_sheet").assertIsDisplayed()
 
@@ -199,6 +202,10 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("detail_follow_case_button").assertIsDisplayed()
         composeTestRule.onNodeWithTag("detail_follow_case_button").performClick()
         assertTrue(followClicked)
+
+        // Verify incident photo & video gallery is displayed for the Andhra Pradesh incident
+        composeTestRule.onNodeWithTag("detail_incident_media_gallery").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("attach_incident_media_button").performScrollTo().assertIsDisplayed()
 
         // Verify timeline sort toggles exist
         composeTestRule.onNodeWithTag("timeline_sort_chronological").performScrollTo().assertIsDisplayed()

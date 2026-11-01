@@ -29,7 +29,10 @@ class SurakshaFirestoreRepositoryRuleTest : FirestoreEmulatorTestBase() {
         crimeCategory = "School/Campus Attack",
         caseStage = "CHARGESHEET_FILED",
         incidentDateLabel = "14 Aug 2026",
-        personalNotes = "Saved for life to track fast-track court verdict."
+        personalNotes = "Saved for life to track fast-track court verdict.",
+        imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Andhra_Pradesh_High_Court.jpg/960px-Andhra_Pradesh_High_Court.jpg",
+        videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        mediaCaption = "Verified incident photo & video broadcast (POCSO Section 23 compliant)."
     )
 
     @Test
@@ -46,7 +49,30 @@ class SurakshaFirestoreRepositoryRuleTest : FirestoreEmulatorTestBase() {
         val emittedCases = withTimeout(FLOW_TIMEOUT_MS) {
             repository.observeSavedCases(aliceUid).first { list -> list.any { it.id == caseId } }
         }
-        assertTrue(emittedCases.any { it.id == caseId && it.stateName == "Andhra Pradesh" })
+        assertTrue(emittedCases.any { it.id == caseId && it.stateName == "Andhra Pradesh" && it.imageUrl.isNotBlank() && it.videoUrl.isNotBlank() })
+    }
+
+    @Test
+    fun publishPublicDispatch_alicePublishes_bobObservesAcrossDevices_succeeds() = runBlocking {
+        val aliceUid = signInTestUser(ALICE_EMAIL)
+        val aliceRepo = SurakshaFirestoreRepository(firestore)
+        val caseId = "pub_${UUID.randomUUID().toString().replace("-", "").take(16)}"
+
+        val publishResult = withTimeout(DEFAULT_TIMEOUT_MS) {
+            aliceRepo.publishPublicDispatch(caseId, sampleSavedCase(aliceUid).copy(visibility = "PUBLIC"))
+        }
+        assertTrue("Expected publishPublicDispatch to succeed, got ${publishResult.exceptionOrNull()}", publishResult.isSuccess)
+
+        // Switch to Bob (simulating a different user's phone) and verify Bob sees Alice's published news + photo + video
+        signInTestUser(BOB_EMAIL)
+        val bobRepo = SurakshaFirestoreRepository(firestore)
+        val bobObserved = withTimeout(FLOW_TIMEOUT_MS) {
+            bobRepo.observePublicDispatches().first { list -> list.any { it.id == caseId } }
+        }
+        val received = bobObserved.first { it.id == caseId }
+        assertEquals("Andhra Pradesh", received.stateName)
+        assertTrue(received.imageUrl.startsWith("https://"))
+        assertTrue(received.videoUrl.startsWith("https://"))
     }
 
     @Test

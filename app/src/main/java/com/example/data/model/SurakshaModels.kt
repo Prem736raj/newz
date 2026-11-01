@@ -213,6 +213,23 @@ data class TranslationCacheEntity(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+enum class MediaAttachmentType {
+    IMAGE,
+    VIDEO
+}
+
+data class CaseMediaAttachment(
+    val id: String,
+    val type: MediaAttachmentType,
+    val url: String,
+    val thumbnailUrl: String = "",
+    val title: String,
+    val caption: String,
+    val sourceCredit: String,
+    val durationLabel: String = "",
+    val externalBroadcastUrl: String = ""
+)
+
 @IgnoreExtraProperties
 data class SavedCase(
     @DocumentId val id: String = "",
@@ -230,6 +247,10 @@ data class SavedCase(
     val caseStage: String = "FIR_FILED",
     val incidentDateLabel: String = "",
     val personalNotes: String? = null,
+    val imageUrl: String = "",
+    val videoUrl: String = "",
+    val mediaCaption: String = "",
+    val visibility: String = "PRIVATE",
     @ServerTimestamp val createdAt: Timestamp? = null,
     @ServerTimestamp val updatedAt: Timestamp? = null
 )
@@ -273,7 +294,10 @@ data class SavedCaseOfflineEntity(
     val triggerWarning: String,
     val relevantLaws: String,
     val personalNotes: String,
-    val savedAtMillis: Long
+    val savedAtMillis: Long,
+    val imageUrl: String = "",
+    val videoUrl: String = "",
+    val mediaCaption: String = ""
 )
 
 data class TimelineUpdateItem(
@@ -337,7 +361,11 @@ data class CaseDossier(
     val isMachineTranslated: Boolean = false,
     val originalTitle: String = title,
     val originalSummary: String = summary,
-    val originalFullReport: String = fullReport
+    val originalFullReport: String = fullReport,
+    val imageUrl: String = "",
+    val videoUrl: String = "",
+    val mediaCaption: String = "",
+    val mediaAttachments: List<CaseMediaAttachment> = emptyList()
 ) {
     val daysSinceIncident: Int
         get() {

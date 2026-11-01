@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -39,6 +40,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
@@ -74,6 +77,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -81,10 +85,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.model.CaseDossier
 import com.example.data.model.CaseStage
 import com.example.data.model.CityJurisdiction
+import com.example.data.model.MediaAttachmentType
 import com.example.data.model.SensitivityLevel
 import com.example.data.model.StateJurisdiction
 import com.example.data.model.TimelineUpdateItem
@@ -784,6 +790,13 @@ fun EditorialNewsCard(
                     }
                 }
             } else {
+                if (dossier.imageUrl.isNotBlank() || dossier.videoUrl.isNotBlank() || dossier.mediaAttachments.isNotEmpty()) {
+                    IncidentMediaPreviewBanner(
+                        dossier = dossier,
+                        isFeatured = isFeatured
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
                 Text(
                     text = displayTitle,
                     style = if (isFeatured) {
@@ -993,6 +1006,125 @@ fun MachineTranslationBannerRow(
 }
 
 /**
+ * Visual banner displaying the incident photo or video thumbnail on News & Tracker cards.
+ */
+@Composable
+fun IncidentMediaPreviewBanner(
+    dossier: CaseDossier,
+    isFeatured: Boolean = false
+) {
+    val hasVideo = dossier.videoUrl.isNotBlank() ||
+        dossier.mediaAttachments.any { it.type == MediaAttachmentType.VIDEO }
+    val previewImageUrl = dossier.imageUrl.ifBlank {
+        dossier.mediaAttachments.firstOrNull { it.thumbnailUrl.isNotBlank() }?.thumbnailUrl
+            ?: dossier.mediaAttachments.firstOrNull { it.type == MediaAttachmentType.IMAGE }?.url
+            ?: ""
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (isFeatured) 108.dp else 92.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .testTag("incident_media_banner_${dossier.id}")
+    ) {
+        if (previewImageUrl.isNotBlank()) {
+            AsyncImage(
+                model = previewImageUrl,
+                contentDescription = stringResource(R.string.cd_incident_photo),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (hasVideo) Icons.Default.PlayCircleFilled else Icons.Default.PhotoLibrary,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+        }
+
+        // Top-left Photo / Video Report Badge
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.78f),
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (hasVideo) Icons.Default.PlayCircleFilled else Icons.Default.PhotoLibrary,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.inverseOnSurface,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = if (hasVideo) {
+                            stringResource(R.string.media_badge_video)
+                        } else {
+                            stringResource(R.string.media_badge_photo)
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.inverseOnSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            if (dossier.mediaAttachments.size > 1) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = "+${dossier.mediaAttachments.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        // Bottom caption strip
+        if (dossier.mediaCaption.isNotBlank()) {
+            Surface(
+                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.72f),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = dossier.mediaCaption,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
  * Dedicated Case Tracker card for the "Never Forgotten" (Track) & Saved screens.
  */
 @Composable
@@ -1126,6 +1258,13 @@ fun CaseDossierCard(
                     }
                 }
             } else {
+                if (dossier.imageUrl.isNotBlank() || dossier.videoUrl.isNotBlank() || dossier.mediaAttachments.isNotEmpty()) {
+                    IncidentMediaPreviewBanner(
+                        dossier = dossier,
+                        isFeatured = false
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 Text(
                     text = displayTitle,
                     style = MaterialTheme.typography.titleLarge,

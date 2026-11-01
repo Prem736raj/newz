@@ -99,6 +99,15 @@ class SurakshaFirestoreRepository(private val db: FirebaseFirestore) {
         if (!savedCase.personalNotes.isNullOrBlank()) {
             payload["personalNotes"] = savedCase.personalNotes.take(2000)
         }
+        if (savedCase.imageUrl.isNotBlank()) {
+            payload["imageUrl"] = savedCase.imageUrl.take(2000)
+        }
+        if (savedCase.videoUrl.isNotBlank()) {
+            payload["videoUrl"] = savedCase.videoUrl.take(2000)
+        }
+        if (savedCase.mediaCaption.isNotBlank()) {
+            payload["mediaCaption"] = savedCase.mediaCaption.take(1000)
+        }
         return try {
             docRef.set(payload).await()
             Result.success(safeDocId)
@@ -139,6 +148,72 @@ class SurakshaFirestoreRepository(private val db: FirebaseFirestore) {
             throw e
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.DELETE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    fun observePublicDispatches(): Flow<List<SavedCase>> = flow {
+        val path = "public_dispatches"
+        emitAll(
+            db.collection("public_dispatches")
+                .whereEqualTo("visibility", "PUBLIC")
+                .snapshots()
+                .map { snapshot ->
+                    snapshot.toObjects(
+                        SavedCase::class.java,
+                        DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
+                    )
+                }
+                .catch { error ->
+                    if (error is Exception) {
+                        handleFirestoreError(error, OperationType.LIST, path)
+                    }
+                    throw error
+                }
+        )
+    }
+
+    suspend fun publishPublicDispatch(caseId: String, savedCase: SavedCase): Result<String> {
+        val uid = requireUserId()
+        val safeDocId = caseId.replace(Regex("[^a-zA-Z0-9_\\-]"), "_").take(120).ifBlank { "case_${System.currentTimeMillis()}" }
+        val docRef = db.collection("public_dispatches").document(safeDocId)
+        val payload = mutableMapOf<String, Any>(
+            "userId" to uid,
+            "title" to savedCase.title.take(300),
+            "summary" to savedCase.summary.take(1000),
+            "fullReport" to savedCase.fullReport.take(10000),
+            "stateName" to savedCase.stateName.take(100),
+            "districtName" to savedCase.districtName.take(100),
+            "cityName" to savedCase.cityName.take(100),
+            "mlaName" to savedCase.mlaName.take(200),
+            "mpName" to savedCase.mpName.take(200),
+            "victimCategory" to savedCase.victimCategory.take(100),
+            "crimeCategory" to savedCase.crimeCategory.take(100),
+            "caseStage" to savedCase.caseStage.take(100),
+            "incidentDateLabel" to savedCase.incidentDateLabel.take(100),
+            "visibility" to "PUBLIC",
+            "createdAt" to (savedCase.createdAt ?: FieldValue.serverTimestamp()),
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        if (!savedCase.personalNotes.isNullOrBlank()) {
+            payload["personalNotes"] = savedCase.personalNotes.take(2000)
+        }
+        if (savedCase.imageUrl.isNotBlank()) {
+            payload["imageUrl"] = savedCase.imageUrl.take(2000)
+        }
+        if (savedCase.videoUrl.isNotBlank()) {
+            payload["videoUrl"] = savedCase.videoUrl.take(2000)
+        }
+        if (savedCase.mediaCaption.isNotBlank()) {
+            payload["mediaCaption"] = savedCase.mediaCaption.take(1000)
+        }
+        return try {
+            docRef.set(payload).await()
+            Result.success(safeDocId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.CREATE, docRef.path)
             Result.failure(e)
         }
     }

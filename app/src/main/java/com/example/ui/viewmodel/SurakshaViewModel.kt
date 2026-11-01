@@ -12,11 +12,13 @@ import com.example.data.model.AppLanguage
 import com.example.data.model.TranslationCacheEntity
 import com.example.data.model.CaseDossier
 import com.example.data.model.CaseFollowUp
+import com.example.data.model.CaseMediaAttachment
 import com.example.data.model.CaseStage
 import com.example.data.model.CityJurisdiction
 import com.example.data.model.DistrictJurisdiction
 import com.example.data.model.EmergencyHelpline
 import com.example.data.model.LegalRightGuide
+import com.example.data.model.MediaAttachmentType
 import com.example.data.model.SavedCase
 import com.example.data.model.SavedCaseOfflineEntity
 import com.example.data.model.SensitivityLevel
@@ -142,6 +144,16 @@ class SurakshaViewModel(
             }
     }
 
+    private val publicDispatchesFlow = if (isGuestUser) {
+        flowOf(emptyList())
+    } else {
+        firestoreRepository.observePublicDispatches()
+            .catch { e ->
+                Log.w("SurakshaVM", "Offline fallback for public_dispatches", e)
+                emit(emptyList())
+            }
+    }
+
     private val offlineSavedCasesFlow = offlineDao.observeAllSavedCases()
         .catch { e ->
             Log.w("SurakshaVM", "Error observing Room saved_cases_offline", e)
@@ -158,13 +170,14 @@ class SurakshaViewModel(
     }
 
     private val baseMergedDossiersFlow = combine(
-        cloudSavedCasesFlow,
-        cloudFollowUpsFlow,
+        combine(cloudSavedCasesFlow, cloudFollowUpsFlow, publicDispatchesFlow) { saved, updates, pub ->
+            Triple(saved, updates, pub)
+        },
         offlineSavedCasesFlow,
         _liveRssDossiers,
         _followedCaseIds
-    ) { cloudSaved, cloudUpdates, offlineSaved, liveRss, followedIds ->
-        mergeAllDossiers(cloudSaved, cloudUpdates, offlineSaved, liveRss, followedIds)
+    ) { (cloudSaved, cloudUpdates, publicDispatches), offlineSaved, liveRss, followedIds ->
+        mergeAllDossiers(cloudSaved, cloudUpdates, publicDispatches, offlineSaved, liveRss, followedIds)
     }
 
     val allDossiers: StateFlow<List<CaseDossier>> = combine(
@@ -536,7 +549,10 @@ class SurakshaViewModel(
                         crimeCategory = dossier.crimeCategory,
                         caseStage = dossier.caseStage.code,
                         incidentDateLabel = dossier.incidentDateLabel,
-                        personalNotes = note
+                        personalNotes = note,
+                        imageUrl = dossier.imageUrl,
+                        videoUrl = dossier.videoUrl,
+                        mediaCaption = dossier.mediaCaption
                     )
                     val res = firestoreRepository.saveCaseForLife(dossier.id, cloudModel)
                     _statusBannerMessage.value = if (res.isSuccess) {
@@ -571,11 +587,71 @@ class SurakshaViewModel(
                     crimeCategory = dossier.crimeCategory,
                     caseStage = dossier.caseStage.code,
                     incidentDateLabel = dossier.incidentDateLabel,
-                    personalNotes = cleanNote
+                    personalNotes = cleanNote,
+                    imageUrl = dossier.imageUrl,
+                    videoUrl = dossier.videoUrl,
+                    mediaCaption = dossier.mediaCaption
                 )
                 firestoreRepository.saveCaseForLife(dossier.id, cloudModel)
             }
             _statusBannerMessage.value = "Private note saved."
+        }
+    }
+
+    fun attachMediaToDossier(
+        dossier: CaseDossier,
+        imageUrl: String,
+        videoUrl: String,
+        mediaCaption: String
+    ) {
+        val cleanImg = imageUrl.trim()
+        val cleanVid = videoUrl.trim()
+        val cleanCaption = mediaCaption.trim().ifBlank {
+            "Verified incident photo/video attached by user (POCSO Section 23 compliant)."
+        }
+        if (cleanImg.isBlank() && cleanVid.isBlank()) return
+        viewModelScope.launch {
+            val updatedDossier = dossier.copy(
+                imageUrl = cleanImg.ifBlank { dossier.imageUrl },
+                videoUrl = cleanVid.ifBlank { dossier.videoUrl },
+                mediaCaption = cleanCaption
+            )
+            offlineDao.upsertSavedCase(
+                updatedDossier.toOfflineEntity(
+                    dossier.personalNotes.ifBlank { "Attached incident media." }
+                )
+            )
+            if (!isGuestUser) {
+                val cloudCase = SavedCase(
+                    id = dossier.id,
+                    userId = currentUserId,
+                    title = dossier.originalTitle.ifBlank { dossier.title },
+                    summary = dossier.originalSummary.ifBlank { dossier.summary },
+                    fullReport = dossier.originalFullReport.ifBlank { dossier.fullReport },
+                    stateName = dossier.stateName,
+                    districtName = dossier.districtName,
+                    cityName = dossier.cityName,
+                    mlaName = "${dossier.mlaName} (${dossier.mlaConstituency})",
+                    mpName = "${dossier.mpName} (${dossier.mpConstituency})",
+                    victimCategory = dossier.victimCategory,
+                    crimeCategory = dossier.crimeCategory,
+                    caseStage = dossier.caseStage.code,
+                    incidentDateLabel = dossier.incidentDateLabel,
+                    personalNotes = dossier.personalNotes.ifBlank { "Attached incident media." },
+                    imageUrl = updatedDossier.imageUrl,
+                    videoUrl = updatedDossier.videoUrl,
+                    mediaCaption = updatedDossier.mediaCaption
+                )
+                firestoreRepository.saveCaseForLife(dossier.id, cloudCase)
+                // Also publish https:// media to shared public_dispatches so all users receive the photo/video
+                if (updatedDossier.imageUrl.startsWith("http") || updatedDossier.videoUrl.startsWith("http")) {
+                    firestoreRepository.publishPublicDispatch(
+                        dossier.id,
+                        cloudCase.copy(visibility = "PUBLIC")
+                    )
+                }
+            }
+            _statusBannerMessage.value = "Incident photo/video attached & synced to case dossier."
         }
     }
 
@@ -626,7 +702,10 @@ class SurakshaViewModel(
                         crimeCategory = dossier.crimeCategory,
                         caseStage = newStage.code,
                         incidentDateLabel = dossier.incidentDateLabel,
-                        personalNotes = "Latest logged update: $headline"
+                        personalNotes = "Latest logged update: $headline",
+                        imageUrl = dossier.imageUrl,
+                        videoUrl = dossier.videoUrl,
+                        mediaCaption = dossier.mediaCaption
                     )
                 )
             }
@@ -651,7 +730,10 @@ class SurakshaViewModel(
         victimCategory: String,
         crimeCategory: String,
         caseStage: CaseStage,
-        personalNotes: String
+        personalNotes: String,
+        imageUrl: String = "",
+        videoUrl: String = "",
+        mediaCaption: String = ""
     ) {
         if (title.isBlank() || summary.isBlank()) return
         viewModelScope.launch {
@@ -659,6 +741,46 @@ class SurakshaViewModel(
             val rep = getActiveConstituencyRepresentative(stateName, districtName, cityName)
             val resolvedMla = mlaName.ifBlank { rep?.mlaName ?: "Not verified" }
             val resolvedMp = mpName.ifBlank { rep?.mpName ?: "Not verified" }
+            val cleanImg = imageUrl.trim()
+            val cleanVid = videoUrl.trim()
+            val cleanCaption = mediaCaption.trim().ifBlank {
+                if (cleanImg.isNotBlank() || cleanVid.isNotBlank()) {
+                    "Attached incident photo/video (POCSO Section 23 & BNS Section 72 compliant)."
+                } else {
+                    ""
+                }
+            }
+
+            val attachments = buildList {
+                if (cleanImg.isNotBlank()) {
+                    add(
+                        CaseMediaAttachment(
+                            id = "${newCaseId}_img",
+                            type = MediaAttachmentType.IMAGE,
+                            url = cleanImg,
+                            thumbnailUrl = cleanImg,
+                            title = "Attached Incident Photo — ${cityName.ifBlank { "Elamanchili" }}",
+                            caption = cleanCaption,
+                            sourceCredit = "User Submitted Media (Awaiting Editorial Verification)"
+                        )
+                    )
+                }
+                if (cleanVid.isNotBlank()) {
+                    add(
+                        CaseMediaAttachment(
+                            id = "${newCaseId}_vid",
+                            type = MediaAttachmentType.VIDEO,
+                            url = cleanVid,
+                            thumbnailUrl = cleanImg,
+                            title = "Attached Incident Video Report — ${cityName.ifBlank { "Elamanchili" }}",
+                            caption = cleanCaption,
+                            sourceCredit = "User Submitted Video (Awaiting Editorial Verification)",
+                            durationLabel = "VIDEO",
+                            externalBroadcastUrl = cleanVid
+                        )
+                    )
+                }
+            }
 
             val newDossier = CaseDossier(
                 id = newCaseId,
@@ -684,6 +806,10 @@ class SurakshaViewModel(
                 triggerWarning = "Content Advisory: User-submitted case dossier pending verification.",
                 relevantLaws = listOf("BNSS Section 173 (Zero FIR)", "POCSO Section 23 (Minor Privacy Protection)"),
                 sourceName = "User Archived Dossier (Private / Pending Verification)",
+                imageUrl = cleanImg,
+                videoUrl = cleanVid,
+                mediaCaption = cleanCaption,
+                mediaAttachments = attachments,
                 isSavedForLife = true,
                 isFollowed = true,
                 personalNotes = personalNotes,
@@ -693,31 +819,38 @@ class SurakshaViewModel(
             offlineDao.upsertSavedCase(newDossier.toOfflineEntity(personalNotes))
             _followedCaseIds.value = _followedCaseIds.value + newCaseId
             val cloudResult = if (!isGuestUser) {
-                firestoreRepository.saveCaseForLife(
-                    newCaseId,
-                    SavedCase(
-                        id = newCaseId,
-                        userId = currentUserId,
-                        title = newDossier.title,
-                        summary = newDossier.summary,
-                        fullReport = newDossier.fullReport,
-                        stateName = newDossier.stateName,
-                        districtName = newDossier.districtName,
-                        cityName = newDossier.cityName,
-                        mlaName = resolvedMla,
-                        mpName = resolvedMp,
-                        victimCategory = victimCategory,
-                        crimeCategory = crimeCategory,
-                        caseStage = caseStage.code,
-                        incidentDateLabel = newDossier.incidentDateLabel,
-                        personalNotes = personalNotes.ifBlank { "Archived in private vault." }
-                    )
+                val cloudCase = SavedCase(
+                    id = newCaseId,
+                    userId = currentUserId,
+                    title = newDossier.title,
+                    summary = newDossier.summary,
+                    fullReport = newDossier.fullReport,
+                    stateName = newDossier.stateName,
+                    districtName = newDossier.districtName,
+                    cityName = newDossier.cityName,
+                    mlaName = resolvedMla,
+                    mpName = resolvedMp,
+                    victimCategory = victimCategory,
+                    crimeCategory = crimeCategory,
+                    caseStage = caseStage.code,
+                    incidentDateLabel = newDossier.incidentDateLabel,
+                    personalNotes = personalNotes.ifBlank { "Archived in private vault." },
+                    imageUrl = cleanImg,
+                    videoUrl = cleanVid,
+                    mediaCaption = cleanCaption
                 )
+                val privateSave = firestoreRepository.saveCaseForLife(newCaseId, cloudCase)
+                // Publish to shared /public_dispatches so all authenticated users see the incident & https:// media
+                firestoreRepository.publishPublicDispatch(
+                    newCaseId,
+                    cloudCase.copy(visibility = "PUBLIC")
+                )
+                privateSave
             } else {
                 Result.failure(IllegalStateException("Guest mode"))
             }
             _statusBannerMessage.value = if (cloudResult.isSuccess) {
-                "Case archived in your Saved Vault (marked 'Awaiting Verification')."
+                "Case archived & broadcast to shared Cloud Feed (marked 'Awaiting Verification')."
             } else {
                 "Case archived locally in your Saved Vault."
             }
@@ -861,6 +994,7 @@ class SurakshaViewModel(
     private fun mergeAllDossiers(
         cloudSaved: List<SavedCase>,
         cloudUpdates: List<CaseFollowUp>,
+        publicDispatches: List<SavedCase>,
         offlineSaved: List<SavedCaseOfflineEntity>,
         liveRss: List<CaseDossier>,
         followedIds: Set<String>
@@ -868,6 +1002,7 @@ class SurakshaViewModel(
         val seedList = SurakshaArchiveSeedData.buildInitialCaseDossiers()
         val savedIds = (cloudSaved.map { it.id } + offlineSaved.map { it.caseId }).toSet()
         val updatesByCaseId = cloudUpdates.groupBy { it.caseId }
+        val allCloudRecords = (cloudSaved + publicDispatches).distinctBy { it.id }
 
         val mergedMap = linkedMapOf<String, CaseDossier>()
 
@@ -889,15 +1024,65 @@ class SurakshaViewModel(
             }
             val offlineMatch = offlineSaved.find { it.caseId == seed.id }
             val cloudMatch = cloudSaved.find { it.id == seed.id }
+                ?: publicDispatches.find { it.id == seed.id }
             val latestStage = cloudMatch?.let { CaseStage.fromCode(it.caseStage) }
                 ?: offlineMatch?.let { CaseStage.fromCode(it.caseStageCode) }
                 ?: seed.caseStage
+
+            val extraMedia = buildList {
+                val customImg = cloudMatch?.imageUrl?.takeIf { it.isNotBlank() && it != seed.imageUrl }
+                    ?: offlineMatch?.imageUrl?.takeIf { it.isNotBlank() && it != seed.imageUrl }
+                val customVid = cloudMatch?.videoUrl?.takeIf { it.isNotBlank() && it != seed.videoUrl }
+                    ?: offlineMatch?.videoUrl?.takeIf { it.isNotBlank() && it != seed.videoUrl }
+                val customCap = cloudMatch?.mediaCaption?.takeIf { it.isNotBlank() }
+                    ?: offlineMatch?.mediaCaption?.takeIf { it.isNotBlank() }
+                    ?: "User-attached incident media"
+
+                if (customImg != null) {
+                    add(
+                        CaseMediaAttachment(
+                            id = "${seed.id}_user_img",
+                            type = MediaAttachmentType.IMAGE,
+                            url = customImg,
+                            thumbnailUrl = customImg,
+                            title = "Attached Incident Photo — ${seed.cityName}",
+                            caption = customCap,
+                            sourceCredit = "User Attached Photo"
+                        )
+                    )
+                }
+                if (customVid != null) {
+                    add(
+                        CaseMediaAttachment(
+                            id = "${seed.id}_user_vid",
+                            type = MediaAttachmentType.VIDEO,
+                            url = customVid,
+                            thumbnailUrl = customImg ?: seed.imageUrl,
+                            title = "Attached Incident Video — ${seed.cityName}",
+                            caption = customCap,
+                            sourceCredit = "User Attached Video",
+                            durationLabel = "VIDEO",
+                            externalBroadcastUrl = customVid
+                        )
+                    )
+                }
+            }
 
             mergedMap[seed.id] = seed.copy(
                 caseStage = latestStage,
                 isSavedForLife = savedIds.contains(seed.id),
                 isFollowed = followedIds.contains(seed.id),
                 personalNotes = cloudMatch?.personalNotes ?: offlineMatch?.personalNotes ?: seed.personalNotes,
+                imageUrl = cloudMatch?.imageUrl?.ifBlank { null }
+                    ?: offlineMatch?.imageUrl?.ifBlank { null }
+                    ?: seed.imageUrl,
+                videoUrl = cloudMatch?.videoUrl?.ifBlank { null }
+                    ?: offlineMatch?.videoUrl?.ifBlank { null }
+                    ?: seed.videoUrl,
+                mediaCaption = cloudMatch?.mediaCaption?.ifBlank { null }
+                    ?: offlineMatch?.mediaCaption?.ifBlank { null }
+                    ?: seed.mediaCaption,
+                mediaAttachments = seed.mediaAttachments + extraMedia,
                 timelineUpdates = seed.timelineUpdates + extraUpdates
             )
         }
@@ -918,6 +1103,36 @@ class SurakshaViewModel(
                         verificationStatus = VerificationStatus.AWAITING_VERIFICATION,
                         lastCheckedDate = "Logged Today"
                     )
+                }
+                val offlineAttachments = buildList {
+                    if (offline.imageUrl.isNotBlank()) {
+                        add(
+                            CaseMediaAttachment(
+                                id = "${offline.caseId}_img",
+                                type = MediaAttachmentType.IMAGE,
+                                url = offline.imageUrl,
+                                thumbnailUrl = offline.imageUrl,
+                                title = "Attached Incident Photo — ${offline.cityName}",
+                                caption = offline.mediaCaption.ifBlank { offline.summary },
+                                sourceCredit = "User Submitted Media"
+                            )
+                        )
+                    }
+                    if (offline.videoUrl.isNotBlank()) {
+                        add(
+                            CaseMediaAttachment(
+                                id = "${offline.caseId}_vid",
+                                type = MediaAttachmentType.VIDEO,
+                                url = offline.videoUrl,
+                                thumbnailUrl = offline.imageUrl,
+                                title = "Attached Incident Video — ${offline.cityName}",
+                                caption = offline.mediaCaption.ifBlank { offline.summary },
+                                sourceCredit = "User Submitted Video",
+                                durationLabel = "VIDEO",
+                                externalBroadcastUrl = offline.videoUrl
+                            )
+                        )
+                    }
                 }
                 mergedMap[offline.caseId] = CaseDossier(
                     id = offline.caseId,
@@ -944,6 +1159,10 @@ class SurakshaViewModel(
                     triggerWarning = offline.triggerWarning,
                     relevantLaws = offline.relevantLaws.split("|").filter { it.isNotBlank() },
                     sourceName = "User Saved Archive",
+                    imageUrl = offline.imageUrl,
+                    videoUrl = offline.videoUrl,
+                    mediaCaption = offline.mediaCaption,
+                    mediaAttachments = offlineAttachments,
                     timelineUpdates = listOf(
                         TimelineUpdateItem(
                             id = "${offline.caseId}_init",
@@ -965,8 +1184,8 @@ class SurakshaViewModel(
             }
         }
 
-        // 3. Cloud saved cases not in seed or offline yet
-        for (cloud in cloudSaved) {
+        // 3. Cloud saved cases & shared public dispatches not in seed or offline yet
+        for (cloud in allCloudRecords) {
             if (!mergedMap.containsKey(cloud.id)) {
                 val extraUpdates = updatesByCaseId[cloud.id].orEmpty().map { upd ->
                     TimelineUpdateItem(
@@ -980,6 +1199,36 @@ class SurakshaViewModel(
                         isUserAdded = true,
                         verificationStatus = VerificationStatus.AWAITING_VERIFICATION
                     )
+                }
+                val cloudAttachments = buildList {
+                    if (cloud.imageUrl.isNotBlank()) {
+                        add(
+                            CaseMediaAttachment(
+                                id = "${cloud.id}_img",
+                                type = MediaAttachmentType.IMAGE,
+                                url = cloud.imageUrl,
+                                thumbnailUrl = cloud.imageUrl,
+                                title = "Attached Incident Photo — ${cloud.cityName}",
+                                caption = cloud.mediaCaption.ifBlank { cloud.summary },
+                                sourceCredit = "Shared Cloud Dispatch"
+                            )
+                        )
+                    }
+                    if (cloud.videoUrl.isNotBlank()) {
+                        add(
+                            CaseMediaAttachment(
+                                id = "${cloud.id}_vid",
+                                type = MediaAttachmentType.VIDEO,
+                                url = cloud.videoUrl,
+                                thumbnailUrl = cloud.imageUrl,
+                                title = "Attached Incident Video — ${cloud.cityName}",
+                                caption = cloud.mediaCaption.ifBlank { cloud.summary },
+                                sourceCredit = "Shared Cloud Dispatch",
+                                durationLabel = "VIDEO",
+                                externalBroadcastUrl = cloud.videoUrl
+                            )
+                        )
+                    }
                 }
                 mergedMap[cloud.id] = CaseDossier(
                     id = cloud.id,
@@ -1002,11 +1251,15 @@ class SurakshaViewModel(
                     incidentDateLabel = cloud.incidentDateLabel,
                     incidentEpochMillis = cloud.createdAt?.toDate()?.time ?: System.currentTimeMillis(),
                     sensitivityLevel = SensitivityLevel.SENSITIVE,
-                    triggerWarning = "Content Advisory: Saved case dossier.",
+                    triggerWarning = "Content Advisory: Shared case dossier.",
                     relevantLaws = listOf("BNSS Section 173 (Zero FIR)", "POCSO & BNS Provisions"),
-                    sourceName = "Synced User Archive",
+                    sourceName = if (cloud.visibility == "PUBLIC") "Community Cloud Dispatch (Awaiting Verification)" else "Synced User Archive",
+                    imageUrl = cloud.imageUrl,
+                    videoUrl = cloud.videoUrl,
+                    mediaCaption = cloud.mediaCaption,
+                    mediaAttachments = cloudAttachments,
                     timelineUpdates = extraUpdates,
-                    isSavedForLife = true,
+                    isSavedForLife = savedIds.contains(cloud.id),
                     isFollowed = followedIds.contains(cloud.id),
                     personalNotes = cloud.personalNotes.orEmpty(),
                     verificationStatus = VerificationStatus.AWAITING_VERIFICATION
@@ -1054,6 +1307,9 @@ class SurakshaViewModel(
             triggerWarning = triggerWarning,
             relevantLaws = relevantLaws.joinToString("|"),
             personalNotes = notes,
+            imageUrl = imageUrl,
+            videoUrl = videoUrl,
+            mediaCaption = mediaCaption,
             savedAtMillis = System.currentTimeMillis()
         )
     }

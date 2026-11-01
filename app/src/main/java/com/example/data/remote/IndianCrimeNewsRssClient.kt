@@ -97,11 +97,14 @@ class IndianCrimeNewsRssClient {
         var pubDate = ""
         var source = "Verified News Publisher"
         var description = ""
+        var mediaImageUrl = ""
+        var mediaVideoUrl = ""
 
         while (eventType != XmlPullParser.END_DOCUMENT && results.size < 12) {
             when (eventType) {
                 XmlPullParser.START_TAG -> {
-                    when (parser.name.lowercase()) {
+                    val tagName = parser.name.lowercase()
+                    when (tagName) {
                         "item" -> {
                             insideItem = true
                             title = ""
@@ -109,12 +112,28 @@ class IndianCrimeNewsRssClient {
                             pubDate = ""
                             source = "Verified News Publisher"
                             description = ""
+                            mediaImageUrl = ""
+                            mediaVideoUrl = ""
                         }
                         "title" -> if (insideItem) title = parser.nextText().trim()
                         "link" -> if (insideItem) link = parser.nextText().trim()
                         "pubdate" -> if (insideItem) pubDate = parser.nextText().trim()
                         "source" -> if (insideItem) source = parser.nextText().trim()
                         "description" -> if (insideItem) description = parser.nextText().trim()
+                        "media:content", "content", "enclosure", "media:thumbnail", "thumbnail" -> {
+                            if (insideItem) {
+                                val attrUrl = parser.getAttributeValue(null, "url")?.trim().orEmpty()
+                                val attrType = parser.getAttributeValue(null, "type")?.lowercase().orEmpty()
+                                val attrMedium = parser.getAttributeValue(null, "medium")?.lowercase().orEmpty()
+                                if (attrUrl.startsWith("http")) {
+                                    if (attrType.contains("video") || attrMedium == "video" || attrUrl.endsWith(".mp4")) {
+                                        if (mediaVideoUrl.isBlank()) mediaVideoUrl = attrUrl
+                                    } else if (mediaImageUrl.isBlank()) {
+                                        mediaImageUrl = attrUrl
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 XmlPullParser.END_TAG -> {
@@ -127,6 +146,15 @@ class IndianCrimeNewsRssClient {
 
                             // Deduplicate identical or near-identical stories across Latin and Indic scripts
                             if (titleStem.length > 4 && seenTitleStems.add(titleStem)) {
+                                if (mediaImageUrl.isBlank()) {
+                                    val imgMatch = Regex("""<img[^>]+src=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+                                        .find(description)
+                                    val candidateImg = imgMatch?.groupValues?.getOrNull(1)?.trim().orEmpty()
+                                    if (candidateImg.startsWith("http")) {
+                                        mediaImageUrl = candidateImg
+                                    }
+                                }
+
                                 val cleanDesc = description
                                     .replace(Regex("<[^>]*>"), " ")
                                     .replace("&nbsp;", " ")
@@ -216,7 +244,14 @@ class IndianCrimeNewsRssClient {
                                         isLiveRss = true,
                                         verificationStatus = VerificationStatus.REPORTED_UNCONFIRMED,
                                         lastVerifiedDate = "Syndicated Today",
-                                        representativeDataSource = matchedLocation.repSourceNote
+                                        representativeDataSource = matchedLocation.repSourceNote,
+                                        imageUrl = mediaImageUrl,
+                                        videoUrl = mediaVideoUrl,
+                                        mediaCaption = if (mediaImageUrl.isNotBlank() || mediaVideoUrl.isNotBlank()) {
+                                            "Syndicated media attachment from $source"
+                                        } else {
+                                            ""
+                                        }
                                     )
                                 )
                             }

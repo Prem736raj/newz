@@ -2,6 +2,9 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -37,13 +40,16 @@ import androidx.compose.material.icons.filled.BookmarkAdded
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -71,6 +77,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -914,10 +921,28 @@ fun PermanentVaultScreen(
         personalNotes: String
     ) -> Unit,
     onQuickSelectJurisdiction: (String, String, String) -> Unit,
-    onToggleFollow: (CaseDossier) -> Unit = {}
+    onToggleFollow: (CaseDossier) -> Unit = {},
+    onArchiveNewIncidentWithMedia: ((
+        title: String,
+        summary: String,
+        fullReport: String,
+        stateName: String,
+        districtName: String,
+        cityName: String,
+        mlaName: String,
+        mpName: String,
+        victimCategory: String,
+        crimeCategory: String,
+        caseStage: CaseStage,
+        personalNotes: String,
+        imageUrl: String,
+        videoUrl: String,
+        mediaCaption: String
+    ) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showCreateModal by remember { mutableStateOf(false) }
+    var showUploadGuideModal by remember { mutableStateOf(false) }
     var selectedSection by remember { mutableStateOf(SavedSectionTab.SAVED_ARTICLES) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedStateFilter by remember { mutableStateOf(ALL_STATES_KEY) }
@@ -1048,6 +1073,50 @@ fun PermanentVaultScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(stringResource(R.string.saved_add_case_btn), maxLines = 1)
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Direct News & Media Upload Guide Banner Button
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { showUploadGuideModal = true }
+                        .testTag("open_direct_upload_guide_button")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudUpload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.media_upload_guide_btn),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
 
@@ -1207,6 +1276,26 @@ fun PermanentVaultScreen(
             onSubmit = { title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes ->
                 onArchiveNewIncident(title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes)
                 showCreateModal = false
+            },
+            onSubmitWithMedia = { title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes, img, vid, cap ->
+                if (onArchiveNewIncidentWithMedia != null) {
+                    onArchiveNewIncidentWithMedia(
+                        title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes, img, vid, cap
+                    )
+                } else {
+                    onArchiveNewIncident(title, summary, fullReport, st, dist, ct, mla, mp, victim, cat, stage, notes)
+                }
+                showCreateModal = false
+            }
+        )
+    }
+
+    if (showUploadGuideModal) {
+        DirectUploadArchitectureDialog(
+            onDismiss = { showUploadGuideModal = false },
+            onUploadNowClick = {
+                showUploadGuideModal = false
+                showCreateModal = true
             }
         )
     }
@@ -1221,6 +1310,104 @@ fun PermanentVaultScreen(
             }
         )
     }
+}
+
+@Composable
+fun DirectUploadArchitectureDialog(
+    onDismiss: () -> Unit,
+    onUploadNowClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.media_upload_guide_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.media_upload_guide_step1_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.media_upload_guide_step1_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.media_upload_guide_step2_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.media_upload_guide_step2_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.media_upload_guide_step3_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.media_upload_guide_step3_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onUploadNowClick,
+                modifier = Modifier.testTag("guide_upload_now_button")
+            ) {
+                Text(stringResource(R.string.saved_add_case_btn))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_close))
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -1241,8 +1428,26 @@ fun ArchiveNewIncidentModal(
         crimeCategory: String,
         caseStage: CaseStage,
         personalNotes: String
-    ) -> Unit
+    ) -> Unit,
+    onSubmitWithMedia: ((
+        title: String,
+        summary: String,
+        fullReport: String,
+        stateName: String,
+        districtName: String,
+        cityName: String,
+        mlaName: String,
+        mpName: String,
+        victimCategory: String,
+        crimeCategory: String,
+        caseStage: CaseStage,
+        personalNotes: String,
+        imageUrl: String,
+        videoUrl: String,
+        mediaCaption: String
+    ) -> Unit)? = null
 ) {
+    val context = LocalContext.current
     var selectedStateObj by remember { mutableStateOf(states.first()) }
     var selectedDistrictObj by remember(selectedStateObj) { mutableStateOf(selectedStateObj.districts.first()) }
     var selectedCityObj by remember(selectedDistrictObj) { mutableStateOf(selectedDistrictObj.cities.first()) }
@@ -1261,6 +1466,37 @@ fun ArchiveNewIncidentModal(
     val crimeCategory by remember { mutableStateOf("School/Campus Safety") }
     val caseStage by remember { mutableStateOf(CaseStage.FIR_FILED) }
     var personalNotes by remember { mutableStateOf("") }
+    var imageUrlInput by remember { mutableStateOf("") }
+    var videoUrlInput by remember { mutableStateOf("") }
+    var mediaCaptionInput by remember { mutableStateOf("") }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            imageUrlInput = uri.toString()
+        }
+    }
+
+    val videoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            videoUrlInput = uri.toString()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1349,6 +1585,92 @@ fun ArchiveNewIncidentModal(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2
                 )
+
+                // Direct Photo & Video Upload Section
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("modal_pick_photo_button"),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.media_pick_photo_btn),
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            videoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("modal_pick_video_button"),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Videocam,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.media_pick_video_btn),
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = imageUrlInput,
+                    onValueChange = { imageUrlInput = it },
+                    label = { Text(stringResource(R.string.media_field_image_url)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("new_incident_image_url_input"),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = videoUrlInput,
+                    onValueChange = { videoUrlInput = it },
+                    label = { Text(stringResource(R.string.media_field_video_url)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("new_incident_video_url_input"),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = mediaCaptionInput,
+                    onValueChange = { mediaCaptionInput = it },
+                    label = { Text(stringResource(R.string.media_field_caption)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("new_incident_media_caption_input"),
+                    singleLine = true
+                )
                 OutlinedTextField(
                     value = personalNotes,
                     onValueChange = { personalNotes = it },
@@ -1361,20 +1683,40 @@ fun ArchiveNewIncidentModal(
         confirmButton = {
             Button(
                 onClick = {
-                    onSubmit(
-                        title,
-                        summary,
-                        fullReport.ifBlank { summary },
-                        selectedStateObj.stateName,
-                        selectedDistrictObj.districtName,
-                        selectedCityObj.cityName,
-                        mlaInput,
-                        mpInput,
-                        victimCategory,
-                        crimeCategory,
-                        caseStage,
-                        personalNotes
-                    )
+                    if (onSubmitWithMedia != null) {
+                        onSubmitWithMedia(
+                            title,
+                            summary,
+                            fullReport.ifBlank { summary },
+                            selectedStateObj.stateName,
+                            selectedDistrictObj.districtName,
+                            selectedCityObj.cityName,
+                            mlaInput,
+                            mpInput,
+                            victimCategory,
+                            crimeCategory,
+                            caseStage,
+                            personalNotes,
+                            imageUrlInput,
+                            videoUrlInput,
+                            mediaCaptionInput
+                        )
+                    } else {
+                        onSubmit(
+                            title,
+                            summary,
+                            fullReport.ifBlank { summary },
+                            selectedStateObj.stateName,
+                            selectedDistrictObj.districtName,
+                            selectedCityObj.cityName,
+                            mlaInput,
+                            mpInput,
+                            victimCategory,
+                            crimeCategory,
+                            caseStage,
+                            personalNotes
+                        )
+                    }
                 },
                 enabled = title.trim().length >= 5 && summary.trim().length >= 8,
                 modifier = Modifier.testTag("submit_new_incident_button")
